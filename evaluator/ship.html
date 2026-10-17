@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The ship pages (ship.js). Published as 404.html: GitHub Pages serves it for every path that has
+     no file, such as /ships/s/ewing, and ship.js renders the ship that path names. tools/build_site.js
+     sets the base below to the site root, so every relative link resolves from there. -->
+<base href="/">
+<title>Ships · X4 Ship Evaluator</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ship.css">
+</head>
+<body class="shippage">
+<header class="sitebar">
+  <a href="./" class="home">X4 Ship Evaluator</a>
+  <a href="./ships">Ships</a>
+  <span class="muted small">Proof of concept: the SWI wiki's ship pages rebuilt from the evaluator's data</span>
+</header>
+<main id="page"></main>
+<p id="page-status" class="muted"></p>
+<script src="data.js"></script>
+<script src="optimiser.js"></script>
+<script src="ship.js"></script>
+</body>
+</html>

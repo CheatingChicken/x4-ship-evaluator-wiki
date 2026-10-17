@@ -65,7 +65,7 @@ td.what { min-width: 170px; font-weight: 600; }
 td.src { min-width: 260px; }
 td.fix { min-width: 220px; }
 td .chip { margin-bottom: 4px; display: inline-block; }
-ul { padding-left: 20px; margin: 6px 0 12px; }
+ul, ol { padding-left: 20px; margin: 6px 0 12px; }
 li { margin: 4px 0; }
 .formula td:nth-child(2) { font-family: var(--mono); font-size: 13px; min-width: 300px; }
 .callout { border-left: 3px solid var(--accent); background: var(--surface); padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
@@ -92,7 +92,7 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
   <div class="item"><span class="chip ok">Present</span><b>Part stats</b><span class="note">engines, shields, weapons, turrets with <code>bullet</code></span></div>
   <div class="item"><span class="chip warn">Partial</span><b>Part price, sellers, licence</b><span class="note">base SWI via swi-api <code>/wares</code> only; none for DABC and RSP</span></div>
   <div class="item"><span class="chip gap">Missing</span><b>Thrusters</b><span class="note">no thruster data on either host</span></div>
-  <div class="item"><span class="chip gap">Missing</span><b>Cargo and hangar capacity</b><span class="note">only storage macro names in ship connections</span></div>
+  <div class="item"><span class="chip warn">Derived</span><b>Cargo and hangar capacity</b><span class="note">not in the data; the ship pages read them from storage macro names (11 values wrong)</span></div>
   <div class="item"><span class="chip gap">Missing</span><b>Faction names</b><span class="note">only a short-code map inside the ship page script</span></div>
   <div class="item"><span class="chip warn">Limited</span><b>Cross-origin access</b><span class="note">readable only from pages on swi.siifr.net</span></div>
 </div>
@@ -113,14 +113,14 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
     <tr>
       <td class="what"><span class="chip gap">Missing</span><br>Cargo capacity and type</td>
       <td>Cargo, trade throughput</td>
-      <td class="src"><code>assets/props/Storage/macros/storage_*_macro.xml</code> in SWI and each submod. The ship JSON only names them (e.g. <code>storage_container_50000_macro</code>). The ship pages work the cargo out of that name (<code>parseShipStorage</code>). Checked against the game's own storage macros, that gives the right cargo for 299 of 305 ships and the wrong cargo for 6 (table below).</td>
+      <td class="src"><code>assets/props/Storage/macros/storage_*_macro.xml</code> in SWI and each submod. The ship JSON only names them (e.g. <code>storage_container_50000_macro</code>). The ship pages work the cargo out of that name (<code>parseShipStorage</code>). Checked against the game's own storage macros, 6 of the 283 ship pages we could check show the wrong cargo (<a href="#page-parsers">details below</a>).</td>
       <td><code>properties/cargo @max @tags</code> (container, solid, liquid, condensate)</td>
       <td class="fix">Copy <code>Storage/macros</code> into the organised layout (e.g. <code>wares/storage/</code>) and either resolve the storage connections in the ship JSON or publish a <code>storage.json</code> dictionary. That also removes the need for the hand-made exception.</td>
     </tr>
     <tr>
       <td class="what"><span class="chip gap">Missing</span><br>Hangar and dock capacity</td>
       <td>Hangar size (carriers)</td>
-      <td class="src"><code>assets/props/Storage/macros/shipstorage_*_macro.xml</code>; DABC also keeps some under <code>assets/props/SurfaceElements/macros/</code> (e.g. <code>dabc_shipstorage_s_66_macro</code>); dock areas in <code>assets/structures/dock/macros/dockarea_*_macro.xml</code></td>
+      <td class="src"><code>assets/props/Storage/macros/shipstorage_*_macro.xml</code>; DABC also keeps some under <code>assets/props/SurfaceElements/macros/</code> (e.g. <code>dabc_shipstorage_s_66_macro</code>); dock areas in <code>assets/structures/dock/macros/dockarea_*_macro.xml</code>. The ship pages read the hangar size from the macro name as well (<code>parseHangers</code>). That works only when the name contains the size, and 5 ship pages show the wrong hangar (<a href="#page-parsers">details below</a>).</td>
       <td><code>properties/dock @capacity</code>, <code>properties/docksize @tags</code> (dock_s, dock_m)</td>
       <td class="fix">Same as storage. Note that almost every ship has an XS storage (<code>shipstorage_gen_xs_01</code>, dock_xs × 10) for spacesuits and drones: a hangar count should only add dock_s and dock_m.</td>
     </tr>
@@ -142,22 +142,69 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
 </table>
 </div>
 
-<h3>Cargo read from storage names: the 6 ships it gets wrong</h3>
-<p class="prose">The page script turns every <code>container_5000</code> storage into 10,000 universal cargo (the "Gozanti C-ROC Raider fix"). Five ships really do have 5,000 container cargo and now show the wrong value. The Raider itself still shows the wrong value, because its storage's name doesn't match the size of its real storage.</p>
+<h2 id="page-parsers">How the ship pages work out cargo and hangars</h2>
+<div class="prose">
+  <p>Neither swi-api nor the static JSON holds a storage capacity. A ship record only names the storage macros it connects, for example the E-wing's <code>storage_container_550_macro</code> and <code>shipstorage_gen_xs_01_macro</code>.</p>
+  <p>Each ship page loads that record (swi-api for base ships, <code>/submods/&lt;mod&gt;/ships/…json</code> for submods). Two functions in the page's own script then read the numbers out of the names:</p>
+  <ul>
+    <li><code>parseShipStorage</code> handles cargo: <code>storage_&lt;type&gt;_&lt;volume&gt;</code>, with <code>universal</code> split into container, solid and liquid.</li>
+    <li><code>parseHangers</code> handles the S and M hangars: <code>shipstorage_…_&lt;s|m&gt;_cap&lt;n&gt;</code>.</li>
+  </ul>
+  <p>That works whenever a name states the true size, which is most of the time. The failures come from four causes.</p>
+</div>
+
+<h3>Four causes</h3>
+<ol class="prose">
+  <li><b>The "Gozanti C-ROC Raider fix" hits the wrong ships.</b> Every version of the script turns any <code>container 5000</code> storage into 10,000 universal cargo. Five ships really do carry 5,000 container cargo and now show the wrong value. The Raider itself is missed: its storage is <code>storage_universal_5000_macro</code>, which really holds 10,000, so the page still shows 5,000.</li>
+  <li><b>Names that don't state the size.</b> <code>shipstorage_gen_s_01_macro</code> (40 S), <code>shipstorage_gen_m_01_macro</code> (10 M) and <code>shipstorage_gen_s_four_macro</code> (4 S) have no <code>cap&lt;n&gt;</code>. The submod pages know only the first of these (a <code>knownHangars</code> entry); the base pages know none of them.</li>
+  <li><b>Values are overwritten, not added up.</b> Both functions assign (<code>result[key] = value</code>), so a ship with several storages of one kind shows only the last one. The DABC Providence Dreadnaught has three <code>shipstorage_gen_s_01</code> (3 × 40) and shows 40. No ship has two cargo storages today, but the cargo function has the same flaw.</li>
+  <li><b>Three copies of the script.</b> Each Wiki.js page carries its own copy, and they have drifted apart:</li>
+</ol>
 <div class="scroll">
 <table>
-  <thead><tr><th>Ship</th><th>Wiki page shows</th><th>Game storage macro has</th></tr></thead>
+  <thead><tr><th>Script copy</th><th>Pages</th><th>Behaviour</th></tr></thead>
   <tbody>
-    <tr><td><code>gozanti_croc_raider</code></td><td>container, solid, liquid 5,000 each</td><td>universal 10,000 (container, solid, liquid)</td></tr>
-    <tr><td><code>gozanti_croc_bm</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
-    <tr><td><code>gr75b</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
-    <tr><td><code>jtype_transport</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
-    <tr><td><code>procursator</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
-    <tr><td><code>obliviator</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
+    <tr><td>Submod pages</td><td>80 (DABC 29, RSP 51)</td><td>The newest copy. Accepts prefixed names (<code>dabc_storage_…</code>, <code>dabc_shipstorage_s_66_macro</code>) and knows <code>shipstorage_gen_s_01</code> = 40. Still has the C-ROC fix and overwrites values.</td></tr>
+    <tr><td>Base ship pages</td><td>204</td><td>An older copy: names must start with <code>storage</code>/<code>shipstorage</code> and contain <code>cap&lt;n&gt;</code>, and it has no hand-made table. That is why the base Providence carrier shows no hangar while the DABC pages handle the same macro.</td></tr>
+    <tr><td>Xenon and Kha'ak pages</td><td>6</td><td>An older copy still. These pages can't show anything: swi-api answers HTTP 500 for their ship records.</td></tr>
   </tbody>
 </table>
 </div>
-<p class="prose">Compared 2026-10-17: every ship on the wiki (base SWI, DABC, RSP), the page's parsing logic against the cargo in the storage macros of SWI 0.9.1.</p>
+
+<h3>Ships whose page shows the wrong cargo (6)</h3>
+<div class="scroll">
+<table>
+  <thead><tr><th>Ship</th><th>Page</th><th>Page shows</th><th>Game has</th><th>Storage macro</th><th>Cause</th></tr></thead>
+  <tbody>
+    <tr><td>Gozanti C-ROC Corsair</td><td><code>ships/m/gozanti_croc_raider</code></td><td>5,000 each container, solid, liquid</td><td>10,000 each (universal)</td><td><code>storage_universal_5000_macro</code></td><td>1: the name understates the size; the fix meant for it misses it</td></tr>
+    <tr><td>GR75 Gallofree Battle Refit</td><td><code>ships/m/gr75b</code></td><td>10,000 each (universal)</td><td>5,000 container</td><td><code>storage_container_5000_macro</code></td><td>1</td></tr>
+    <tr><td>J-type 327 Nubian Starship</td><td><code>ships/m/jtype_transport</code></td><td>10,000 each (universal)</td><td>5,000 container</td><td><code>storage_container_5000_macro</code></td><td>1</td></tr>
+    <tr><td>Procursator Star Destroyer</td><td><code>ships/xl/procursator</code></td><td>10,000 each (universal)</td><td>5,000 container</td><td><code>storage_container_5000_macro</code></td><td>1</td></tr>
+    <tr><td>RSP <code>gozanti_croc_bm</code></td><td><code>submods/rsp/ships/m/gozanti_croc_bm</code></td><td>10,000 each (universal)</td><td>5,000 container</td><td><code>storage_container_5000_macro</code></td><td>1</td></tr>
+    <tr><td>RSP <code>obliviator</code></td><td><code>submods/rsp/ships/xl/obliviator</code></td><td>10,000 each (universal)</td><td>5,000 container</td><td><code>storage_container_5000_macro</code></td><td>1</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Ships whose page shows the wrong hangar (5)</h3>
+<div class="scroll">
+<table>
+  <thead><tr><th>Ship</th><th>Page</th><th>Page shows (S / M)</th><th>Game has (S / M)</th><th>Ship storage macros</th><th>Cause</th></tr></thead>
+  <tbody>
+    <tr><td>CYC Scrapper</td><td><code>ships/l/cor_scrapper</code></td><td>0 / 0</td><td>4 / 0</td><td><code>shipstorage_gen_s_four_macro</code></td><td>2</td></tr>
+    <tr><td>Providence-class carrier/destroyer</td><td><code>ships/xl/ship_providence_carrier_01</code></td><td>0 / 0</td><td>40 / 0</td><td><code>shipstorage_gen_s_01_macro</code></td><td>2, 4: the base copy lacks the entry the submod copy has</td></tr>
+    <tr><td>DABC Providence Dreadnaught</td><td><code>submods/dabc/ships/xl/dabc_providence_dreadnaught</code></td><td>40 / 0</td><td>120 / 0</td><td><code>shipstorage_gen_s_01_macro</code> × 3</td><td>3</td></tr>
+    <tr><td>DABC Sundari</td><td><code>submods/dabc/ships/xxl/dabc_sundari</code></td><td>66 / 0</td><td>66 / 10</td><td><code>dabc_shipstorage_s_66_macro</code>, <code>shipstorage_gen_m_01_macro</code></td><td>2</td></tr>
+    <tr><td>DABC Veragitor-class</td><td><code>submods/dabc/ships/xxl/dabc_veragitor</code></td><td>114 / 0</td><td>114 / 10</td><td><code>dabc_shipstorage_s_114_macro</code>, <code>shipstorage_gen_m_01_macro</code></td><td>2</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="prose">
+  <p><b>Not checked:</b> 7 pages whose swi-api record answers HTTP 500 (the six Xenon and Kha'ak ships plus <code>ships/m/lambda_shuttle_test</code>), and 2 pages that have no storage script (<code>ships/m/css-shuttle</code>, <code>ships/s/fang_menu</code>).</p>
+  <p><b>Method (2026-10-17):</b> we ran each of the 292 ship pages of base SWI, DABC and RSP with its own copy of the two functions on its own ship record, exactly as the page does. We compared the result with the <code>cargo @max</code> and <code>dock @capacity</code> of the same macros in the SWI 0.9.1, DABC and RSP files, summed per ship. Only S and M hangars are shown on the pages, so only those were compared.</p>
+  <div class="callout"><p><b>The lasting fix</b> is the one in the table above: resolve the storage macros when the JSON is generated (or publish a <code>storage.json</code>). Then the pages can show <code>cargo @max</code> and <code>dock @capacity</code> directly, and the name parsing, the C-ROC exception and the hand-made hangar table can all go. Until then, one shared script file for all ship pages would at least stop the copies drifting apart.</p></div>
+</div>
 
 <h2>Smaller issues found while reading the data</h2>
 <ul class="prose">

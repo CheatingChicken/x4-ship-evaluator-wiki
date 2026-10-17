@@ -168,18 +168,63 @@
   }
 
   // ---------------------------------------------------------------- wares
+  // The primary production method: several methods (default, terran, closedloop, ...) make
+  // `production` an array, and "default" is the primary one; one ingredient is an object, not an array.
+  function buildOf(production) {
+    const list = arr(production);
+    const p = list.find((m) => m && m._method === "default") || list[0];
+    if (!p || !p.primary) return null;
+    return { time: number(p._time) || null,
+      wares: arr(p.primary.ware).filter((r) => r && r._ware).map((r) => ({ ware: r._ware, amount: number(r._amount) || 0 })) };
+  }
   function wareRecord(w) {
     if (!w) return null;
     const tags = new Set(String(w._tags || "").split(/\s+/).filter(Boolean));
     const price = w.price || {};
-    return { ware: w._id || null, price: number(price._average) || 0,
+    return { ware: w._id || null, price: number(price._average) || 0, min: number(price._min) || null, max: number(price._max) || null,
       owners: [...new Set(arr(w.owner).map((o) => o && o._faction).filter(Boolean))].sort(),
       licence: (w.restriction && w.restriction._licence) || null,
-      blueprintable: !(tags.has("noblueprint") || tags.has("noplayerblueprint")) };
+      blueprintable: !(tags.has("noblueprint") || tags.has("noplayerblueprint")), build: buildOf(w.production) };
   }
-  // supplement ware entries: {ware, price, owners, licence, blueprintable}
-  const supWare = (w) => (w ? { ware: w.ware || null, price: w.price || 0, owners: (w.owners || []).slice().sort(),
-    licence: w.licence || null, blueprintable: w.blueprintable !== false } : null);
+  // supplement ware entries: {ware, price, min, max, owners, licence, blueprintable}; no build costs
+  const supWare = (w) => (w ? { ware: w.ware || null, price: w.price || 0, min: w.min || null, max: w.max || null,
+    owners: (w.owners || []).slice().sort(), licence: w.licence || null, blueprintable: w.blueprintable !== false, build: null } : null);
+
+  // ---------------------------------------------------------------- details (the ship pages)
+  // What the ship pages show beyond the evaluator's own data. Only built on request (`details`).
+  const longText = (s) => (s == null || unresolved(s) ? null
+    : String(s).split(/\\n/).map(cleanText).filter(Boolean).join("\n") || null);   // paragraphs kept
+  const compact = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v != null));
+  const priceOf = (w) => compact({ min: w.min, avg: w.price || null, max: w.max });
+  const LAUNCHERS = ["weapon", "turret", "missilelauncher", "bomblauncher", "missileturret"];
+  // Weapon and turret columns follow the wiki's own reading of the macros (its ship page script):
+  // shield = damage.shield, else damage.value; pierce = damage.hull (ignores shields); hull =
+  // damage.noshield, else damage.value. Heat buildup = heat per shot x fire rate; a magazine
+  // (ammunition) gives a burst of value / rate seconds and a cooldown of its reload time.
+  function partDetail(e) {
+    const f = e.props, v = (key) => (isNum(f[key]) ? f[key] : null);
+    const o = { description: longText(f["identification.description"]), price: priceOf(e.w), build: e.w.build };
+    if (e.kind === "engine") Object.assign(o, { thrust: v("thrust.forward"), boostDuration: v("boost.duration"), boostRecharge: v("boost.recharge") });
+    if (LAUNCHERS.includes(e.kind)) {
+      const time = v("bullet.reload.time") || v("reload.time");
+      const rate = v("bullet.reload.rate") || v("reload.rate") || (time ? 1 / time : null);
+      const speed = v("bullet.bullet.speed"), life = v("bullet.bullet.lifetime");
+      const heat = v("bullet.heat.value"), mag = v("bullet.ammunition.value");
+      Object.assign(o, { shieldDamage: v("bullet.damage.shield") ?? v("bullet.damage.value"), pierceDamage: v("bullet.damage.hull"),
+        hullDamage: v("bullet.damage.noshield") ?? v("bullet.damage.value"), projectiles: v("bullet.bullet.amount"),
+        speed, range: v("bullet.bullet.range") ?? (speed != null && life != null ? speed * life : null), rate,
+        heatBuildup: heat != null && rate ? heat * rate : null, coolRate: v("heat.coolrate"), overheat: v("heat.overheat"),
+        burst: mag && rate ? mag / rate : null, cooldown: v("bullet.ammunition.reload"), rotation: v("rotationspeed.max") });
+    }
+    return round3(compact(o));
+  }
+  function shipDetail(s) {
+    const v = (key) => (isNum(s.props[key]) ? s.props[key] : null);
+    return compact({ page: { hull: s.hull, key: s.key }, description: longText(s.description), price: priceOf(s.w), build: s.w.build,
+      groupTags: s.groups.map((g) => g.tags),                         // in the order of the ship's groups
+      deployables: v("storage.deployable"), countermeasures: v("storage.countermeasure"), radar: v("radar.range"),
+      supply: v("threatscore.value") });
+  }
 
   // ---------------------------------------------------------------- fetching
   // A pool of at most n requests in flight; each failure retried once.
@@ -206,7 +251,8 @@
   // ---------------------------------------------------------------- build
   /* build({ fetchJson, mods, supplement, config, onProgress, origins }) -> X4DATA
    *   fetchJson(url) -> parsed JSON or null (404). mods: subset of Object.keys(MODS).
-   *   origins: also record which source each part and mining fit comes from (see assemble). */
+   *   origins: also record which source each part and mining fit comes from (see assemble).
+ *   details: also return `details` { ships, parts } by id, for the ship pages (shipDetail, partDetail). */
   async function build(opts) {
     const cfg = Object.assign({}, CONFIG, opts.config || {});
     const mods = (opts.mods || Object.keys(MODS)).filter((m) => m in MODS);   // allowlist
@@ -243,14 +289,14 @@
     const partFiles = (await Promise.all(partJobs)).filter(Boolean);
     progress.phase = "building";
     tell();
-    return assemble({ sup, wares: arr(wares), shipFiles, partFiles, sources, mods, origins: !!opts.origins });
+    return assemble({ sup, wares: arr(wares), shipFiles, partFiles, sources, mods, origins: !!opts.origins, details: !!opts.details });
   }
 
   // ---------------------------------------------------------------- assembly (pure)
   /* origins: for splitting the result per mod (site_loader.js). Parts then carry `origin` (the
    * source that defines them; "base" for thrusters) and each slot group carries `mining` from its
    * slot tags alone plus `miningFrom`, the sources of the mining parts that fit it. */
-  function assemble({ sup, wares, shipFiles, partFiles, sources, mods, origins }) {
+  function assemble({ sup, wares, shipFiles, partFiles, sources, mods, origins, details }) {
     CAL = Object.assign({}, (sup.calibration && sup.calibration.constants) || {});
     const waresByMacro = {};
     for (const w of wares) {
@@ -297,7 +343,7 @@
 
     // Ships
     const ships = {};
-    for (const { src, hull, entry, j } of shipFiles) {
+    for (const { src, hull, id: key, entry, j } of shipFiles) {
       const m = j.macro || {};
       const id = String(m._name || "").toLowerCase();
       const cls = String(m._class || "");
@@ -352,7 +398,7 @@
         purpose: (props.purpose && props.purpose._primary) || null, type: (props.ship && props.ship._type) || null,
         race: ident._makerrace || null, name, variation: cleanText(ident._variation),
         thrusterTags: new Set(String((props.thruster && props.thruster._tags) || "").split(/\s+/).filter(Boolean)),
-        slots, cargo, hangar, unknownStorage, w: wareRecord(j.ware) };
+        slots, cargo, hangar, unknownStorage, w: wareRecord(j.ware), key, description: j.description };
     }
 
     // Fits (catalogue._fits): a part fits a slot when every attach tag but `component` is on it.
@@ -390,7 +436,7 @@
 
     // export.build: parts (buyable only), then ships with their rows.
     const measured = sup.measured || {};
-    const parts = [], index = {};
+    const parts = [], index = {}, det = details ? { ships: {}, parts: {} } : null;
     for (const e of Object.values(equipment).sort((a, b) => (a.id < b.id ? -1 : 1))) {
       if (!e.w) continue;
       let stats = partStats(e), src = "formula";
@@ -403,6 +449,7 @@
         price: e.w.price || 0, owners: e.w.owners, licence: e.w.licence, blueprintable: e.w.blueprintable, src, use: partUse(e, stats),
         stats: round3(Object.fromEntries(Object.entries(stats).filter(([s2]) => PART_STATS.includes(s2)))) });
       if (origins) parts[parts.length - 1].origin = e.origin;
+      if (det) det.parts[e.id] = partDetail(e);
     }
     const outShips = [], notes = { unknownStorage: new Set(), noWare: [] };
     for (const s of Object.values(ships).sort((a, b) => (a.id < b.id ? -1 : 1))) {
@@ -437,6 +484,7 @@
         blueprintable: s.w.blueprintable, hull: P(s, "hull.max"), crew: P(s, "people.capacity"), mass: P(s, "physics.mass"),
         cargo, drones: P(s, "storage.unit"), missiles: P(s, "storage.missile"), hangar,
         groups, engines: engineRows, thrusters: thrusterRows });
+      if (det) det.ships[s.id] = shipDetail(s);
     }
     const sellers = new Set([...outShips, ...parts].flatMap((x) => x.owners));
     const facs = sup.factions || {};
@@ -450,6 +498,7 @@
         mods: ["swi"].concat(mods), load_order: sources.map((s2) => ({ id: s2.id, name: s2.label, version: "" })),
         supplement: sup.generated || null, notes: { unknown_storage: [...notes.unknownStorage].sort(), ships_without_ware: notes.noWare,
           defined_twice: [...overridden].sort() } },
+      ...(det ? { details: det } : {}),
     };
   }
 

@@ -1,9 +1,10 @@
 /* SITE DATA: the published site's data comes as one file per mod, so a visitor downloads SWI plus
  * only the submods they enable (⚙ Settings → Mods).
  *
- *   build (tools/build_site.js)  split(data, mods) -> { manifest, chunks }: data is X4DATA built by
- *                                wiki.js with every mod and `origins`; one chunk per mod, written as
- *                                data/<mod>.json
+ *   build (tools/build_site.js)  split(data, mods) -> { manifest, chunks, details }: data is X4DATA
+ *                                built by wiki.js with every mod, `origins` and `details`; one chunk
+ *                                per mod, written as data/<mod>.json, and the ship pages' extra
+ *                                figures per mod as data/<mod>.details.json
  *   page                         data.js is `window.X4SITE = <manifest>;` followed by this file, which
  *                                then sets window.X4Source; app.js awaits its load(), which fetches
  *                                the enabled mods' chunks and merge()s them into X4DATA
@@ -18,7 +19,11 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else if (root.X4SITE) root.X4Source = api.source(root.X4SITE);
+  else if (root.X4SITE) {
+    // chunk files are named relative to data.js, wherever the page itself lives (the ship pages)
+    const here = root.document && root.document.currentScript ? root.document.currentScript.src : root.location.href;
+    root.X4Source = api.source(root.X4SITE, here);
+  }
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
   const FORMAT = "x4-ship-evaluator/site", VERSION = 1;
@@ -42,6 +47,13 @@
       chunkOf(p.origin, "part " + p.id).parts.push(rec);
     });
     for (const s of data.ships) chunkOf(s.origin, "ship " + s.id).ships.push(s);
+    // ship page figures, filed with the mod of the ship or part they describe
+    const details = Object.fromEntries(ids.map((id) => [id, { format: FORMAT + "/details", version: VERSION, id, ships: {}, parts: {} }]));
+    if (data.details) {
+      const det = (c) => details[c.id];
+      data.parts.forEach((p) => { if (data.details.parts[p.id]) det(chunkOf(p.origin, "part " + p.id)).parts[p.id] = data.details.parts[p.id]; });
+      for (const s of data.ships) if (data.details.ships[s.id]) det(chunkOf(s.origin, "ship " + s.id)).ships[s.id] = data.details.ships[s.id];
+    }
     const meta = Object.assign({}, data.meta);
     delete meta.mods;
     const manifest = { format: FORMAT, version: VERSION, parts: data.parts.length,
@@ -49,7 +61,15 @@
       calibration_default: data.calibration_default, meta,
       mods: ids.map((id) => ({ id, label: id === CORE ? "SW Interworlds" : mods[id],
         ships: chunks[id].ships.length, parts: chunks[id].parts.length })) };
-    return { manifest, chunks };
+    return { manifest, chunks, details };
+  }
+
+  // the ship page figures of the loaded mods, by id
+  // (each record gains `mod`, the mod it comes from, which X4DATA's parts do not carry)
+  function mergeDetails(list) {
+    for (const d of list) if (!d || d.format !== FORMAT + "/details" || d.version !== VERSION) throw new Error("a mod details file is damaged or from another version");
+    const stamp = (d, recs) => Object.fromEntries(Object.entries(recs).map(([id, r]) => [id, Object.assign({ mod: d.id }, r)]));
+    return { ships: Object.assign({}, ...list.map((d) => stamp(d, d.ships))), parts: Object.assign({}, ...list.map((d) => stamp(d, d.parts))) };
   }
 
   // ---------------------------------------------------------------- page
@@ -84,7 +104,16 @@
   }
 
   // window.X4Source for app.js (see its BOOT block)
-  function source(manifest) {
+  // base: the URL the chunk file names are relative to (data.js's own)
+  function source(manifest, base) {
+    const url = (file) => (base ? new URL(file, base).href : file);
+    const fetchJson = async (file) => {
+      const r = await fetch(url(file));
+      if (!r.ok) throw new Error(`HTTP ${r.status} for ${file}`);
+      return r.json();
+    };
+    // CORE plus the given mods, in load order
+    const pick = (mods) => manifest.mods.filter((m) => m.id === CORE || (mods || []).includes(m.id));
     const optional = manifest.mods.filter((m) => m.id !== CORE).map((m) => m.id);
     function enabledMods() {
       try {
@@ -100,23 +129,21 @@
       sizes: Object.fromEntries(manifest.mods.map((m) => [m.id, { ships: m.ships, parts: m.parts, bytes: m.bytes }])),
       enabledMods,
       setMods(list) { try { localStorage.setItem(STORE, JSON.stringify(optional.filter((id) => list.includes(id)))); } catch (e) { /* ignore */ } },
-      async load(onProgress) {
-        const on = enabledMods();
-        const want = manifest.mods.filter((m) => m.id === CORE || on.includes(m.id));
+      // X4DATA for SWI plus the enabled mods, or plus the given ones
+      async load(onProgress, mods) {
+        const want = pick(mods || enabledMods());
         let done = 0;
         const tell = () => onProgress && onProgress({ phase: "ship data", done, total: want.length });
         tell();
-        const chunks = await Promise.all(want.map(async (m) => {
-          const r = await fetch(m.file);
-          if (!r.ok) throw new Error(`HTTP ${r.status} for ${m.file}`);
-          const c = await r.json();
-          done++; tell();
-          return c;
-        }));
+        const chunks = await Promise.all(want.map(async (m) => { const c = await fetchJson(m.file); done++; tell(); return c; }));
         return merge(manifest, chunks);
+      },
+      // the ship pages' extra figures for SWI plus the given mods
+      async details(mods) {
+        return mergeDetails(await Promise.all(pick(mods).filter((m) => m.details).map((m) => fetchJson(m.details))));
       },
     };
   }
 
-  return { FORMAT, VERSION, CORE, split, merge, source };
+  return { FORMAT, VERSION, CORE, split, merge, mergeDetails, source };
 });

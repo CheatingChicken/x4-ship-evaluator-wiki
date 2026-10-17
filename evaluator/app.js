@@ -1434,5 +1434,14 @@
   wire();
   wireSettings();
   wireProfile();
-  run();
+  // ?ship=<id> (the wiki edition's ship pages, "Open in the evaluator"): start with that ship picked.
+  // The parameter then leaves the address, so a reload keeps whatever the user changes afterwards.
+  const linked = new URLSearchParams(location.search).get("ship");
+  if (linked) {
+    const q = new URLSearchParams(location.search);
+    q.delete("ship");
+    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+  }
+  if (linked && D.ships.some((x) => x.id === linked)) setFocus(linked);   // runs the ranking itself
+  else run();
 })();
