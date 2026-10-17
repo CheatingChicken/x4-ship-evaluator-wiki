@@ -59,6 +59,13 @@ td.score { font-family: var(--mono); font-weight: 600; }
 .bar { display: inline-block; height: 8px; background: var(--accent); border-radius: 3px; vertical-align: middle; }
 td .sub { color: var(--muted); font-size: 12px; }
 #detail h3 { margin: 0 0 2px; font-size: 16px; }
+/* drawer heading with its close button; figures grouped like the table header */
+#detail .dhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+#detail-close { flex: none; padding: 0 8px; font-size: 18px; line-height: 1.4; color: var(--muted); }
+#detail-close:hover { color: var(--text); }
+#detail table.figures tr.grp th { position: static; cursor: default; text-align: left; padding-top: 12px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--accent); background: none; }
+#detail table.figures tr.grp:first-child th { padding-top: 4px; }
 #detail table { margin: 8px 0 14px; } #detail td:first-child { text-align: left; color: var(--muted); }
 .slot { display: grid; grid-template-columns: 110px 1fr; gap: 6px; align-items: center; margin: 5px 0; }
 .slot select { width: 100%; } .slot .pinned { border-color: var(--warn); }

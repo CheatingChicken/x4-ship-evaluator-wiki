@@ -398,8 +398,10 @@
       st.cargoType[st.role] = kinds.find((k) => ship.cargo[k] > 0) || kinds[0];
     }
     select(null);
+    autoPick = true;   // the next ranking opens this ship's first row
     changed(true);
   }
+  let autoPick = false;
 
   // Built from the live configuration, so an edited profile is described as it now is.
   function threatTip(t) {
@@ -696,7 +698,9 @@
       const onSale = ship && O.sellerOk(ship, Object.assign({}, c, { focus: null }));
       $("#summary").textContent = ship ? `Fitting ${shipLabel(ship)}: ${r.results.length} distinct loadout${r.results.length === 1 ? "" : "s"}` +
         (onSale ? "" : ". None of the selected shipyards sells you this hull, but its parts can still be bought.") : "";
-      if (r.results.length && !r.results.some((x) => x.key === selected)) select(r.results[0].key);
+      // Picking a ship opens its first row once; a drawer the user closed stays closed after that.
+      if (autoPick && r.results.length && !r.results.some((x) => x.key === selected)) select(r.results[0].key);
+      autoPick = false;
     } else {
       $("#summary").textContent = `${r.results.length} loadouts of ${ships} ships` +
         (r.droppedByLimits ? ` · ${r.droppedByLimits} ship${r.droppedByLimits === 1 ? "" : "s"} could not meet the profile's limits` : "") +
@@ -860,6 +864,17 @@
     return `${partName(p)} · ${stat} · ${money(p.price)}`;
   }
 
+  // The drawer's figures, per table-header group (optimiser METRIC_GROUPS), most telling first.
+  const DRAWER_ORDER = {
+    "Cargo & trade": ["cargo", "throughput", "efficiency", "miningRate", "drones"],
+    Mobility: ["maxSpeed", "boostSpeed", "travelSpeed", "acceleration", "chargeTime", "turnRate", "turnTime", "tripTime"],
+    Offence: ["forwardDps", "burstDps", "turretDps", "missiles"],
+    Defence: ["defence", "toughness", "shield", "shieldRegen", "hull"],
+    Capacity: ["hangar", "crew"],
+  };
+  // Close the drawer: × in it, Escape, or a click on the selected row.
+  function closeDetail() { select(null); renderTable(); renderDetail(); }
+
   function renderDetail() {
     const el = $("#detail");
     const r = last.results.find((x) => x.key === selected);
@@ -869,8 +884,17 @@
     const s = r.ship, m = r.metrics, lo = r.loadout;
     const cand = O.candidates(D, s, r.ctx);  // this row's shipyard(s) and threat rules
     const pins = st.pins[r.key] || {};
-    const metricRows = Object.keys(O.METRICS).map((k) => [O.METRICS[k].label, O.METRICS[k].fn(m), O.METRICS[k].unit])
-      .filter(([, v]) => v).map(([l, v, u]) => `<tr><td>${l}</td><td>${fmt(v, v < 10 ? 2 : 0)} ${u}</td></tr>`).join("");
+    const metricRow = (k) => {
+      const M = O.METRICS[k], v = M && M.fn(m);
+      return v ? `<tr><td>${M.label}</td><td>${fmt(v, v < 10 ? 2 : 0)} ${M.unit}</td></tr>` : "";
+    };
+    // grouped as in the table header, in DRAWER_ORDER within each group (other metrics of a group last)
+    const metricGroups = O.METRIC_GROUPS.map((g) => {
+      const order = (DRAWER_ORDER[g] || []).filter((k) => O.METRICS[k]);
+      const keys = order.concat(Object.keys(O.METRICS).filter((k) => O.METRICS[k].group === g && !order.includes(k)));
+      const rows = keys.map(metricRow).join("");
+      return rows ? `<tr class="grp"><th colspan="2">${g}</th></tr>${rows}` : "";
+    }).join("");
     // Defence breakdown: each part against the best reachable in this size class.
     const refs = last.defenceRefs && last.defenceRefs[s.size];
     const parts = O.defenceParts(m);
@@ -894,13 +918,14 @@
       const pinned = pins.groups && i in pins.groups;
       slots += select("g" + i, `${g.kind} ${(g.size || "?").toUpperCase()} ×${g.count}${g.mining ? " ⛏" : ""}`, cand.groups[i], lo.groups[i], g.kind, pinned, true);
     });
-    el.innerHTML = `<h3>${shipLabel(s)}</h3>
+    el.innerHTML = `<div class="dhead"><h3>${shipLabel(s)}</h3><button type="button" id="detail-close" title="Close (Esc)" aria-label="Close">×</button></div>
       <div class="muted small">${[`<span class="id">${s.id}</span>`, (s.size.toUpperCase() + " " + (s.type || "")).trim(), s.race, s.origin, "licence " + (s.licence || "none")].filter(Boolean).join(" · ")}</div>
       <div class="muted small">Sold by: ${s.owners.map((f) => factionHtml(f)).join(", ")}</div>
       <div class="small">${r.threats.length ? `<b>${threatLabel(r)}</b> · ` : ""}equipment from <b>${sourceHtml(r)}</b>${r.mixedToo && sourceLabel(r) !== "Mixed" ? " · ★ no mixed loadout beats it" : ""}</div>
       ${r.threats.length > 1 ? `<div class="muted small">Score per profile: ${memberScores(r)}</div>` : ""}
       ${breakdownHtml(r)}
-      <table>${`<tr><td>Score</td><td>${fmt(r.score, 1)}</td></tr><tr><td>Hull price</td><td>${money(s.price)}</td></tr>`}${metricRows}</table>
+      <table class="figures"><tr class="grp"><th colspan="2">Overview</th></tr><tr><td>Score</td><td>${fmt(r.score, 1)}</td></tr>
+        <tr><td>Hull price</td><td>${money(s.price)}</td></tr>${metricRow("price")}${metricGroups}</table>
       ${defenceRows ? `<h2>Defence <span class="muted">vs. best of ${refs.ships} ${s.size.toUpperCase()} ship${refs.ships === 1 ? " (itself)" : "s"} in this list</span></h2><table>${defenceRows}</table>` : ""}
       ${m.trip && isFinite(m.trip.total) ? `<h2>Trip <span class="muted">${PF.trip.km} km leg</span></h2><table>
         <tr><td>Travel drive charge</td><td>${fmt(m.trip.charge, 1)} s</td></tr>
@@ -919,6 +944,7 @@
       else { p.groups = p.groups || {}; const gi = +key.slice(1); if (val === undefined) delete p.groups[gi]; else p.groups[gi] = val; }
       changed();
     }));
+    $("#detail-close").onclick = closeDetail;
     $("#unpin").onclick = () => { delete st.pins[r.key]; changed(); };
     $("#cmp-toggle").onclick = () => toggleCompare(r);
     $("#copy").onclick = () => {
@@ -1414,8 +1440,12 @@
     $("#table tbody").onclick = (e) => {
       const tr = e.target.closest("tr"); if (!tr) return;
       if (e.target.dataset.cmp) { const r = last.results.find((x) => x.key === tr.dataset.id); if (r) toggleCompare(r); return; }
+      if (tr.dataset.id === selected) return closeDetail();   // a second click deselects
       select(tr.dataset.id); renderTable(); renderDetail();
     };
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && selected && !document.querySelector("dialog[open]")) closeDetail();
+    });
     wireCompare();
     $("#build-edit").onclick = () => { renderBuildList(); $("#build-dialog").showModal(); };
     $("#build-search").oninput = renderBuildList;
