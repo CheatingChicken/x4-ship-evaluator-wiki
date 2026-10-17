@@ -63,10 +63,6 @@
       silicon: "Silicon", engineparts: "Engine Parts", antimatterconverters: "Antimatter Converters", fieldcoils: "Field Coils",
       shieldcomponents: "Shield Components", missilecomponents: "Missile Components", smartchips: "Smart Chips", claytronics: "Claytronics",
     },
-    licences: {
-      generaluseship: "General use", militaryship: "Military ship", capitalship: "Capital ship",
-      generaluseequipment: "General use", militaryequipment: "Military equipment", capitalequipment: "Capital equipment",
-    },
   };
   const HULLS = ["s", "m", "l", "xl", "xxl"];
   const DEG = 180 / Math.PI;
@@ -117,7 +113,8 @@
       return shown.map(one).join(", ") + (list.length > shown.length
         ? ` <span class="more-chip" title="${esc(list.slice(shown.length).map(fname).join(", "))}">+${list.length - shown.length} more</span>` : "");
     };
-    const licence = (l) => (l ? esc(cfg.licences[l] || l) : "None");
+    // licence names: the shared table (optimiser.js LICENCE_NAMES), as in the evaluator
+    const licence = (l) => (l ? esc((c.licenceNames || {})[l] || l) : "None");
     const build = (b) => (b && b.wares && b.wares.length
       ? b.wares.map((w) => `${num(w.amount, 0)} ${esc(cfg.wareNames[w.ware] || w.ware)}`).join(", ") : `<span class="muted">–</span>`);
     const modChip = (id) => (id && id !== "swi" && c.mods[id] ? ` <span class="modchip" title="${esc(c.mods[id])}">${esc(id.toUpperCase())}</span>` : "");
@@ -521,7 +518,7 @@
       status.textContent = "Loading ship data…";
       const [D, det] = await Promise.all([src.load(null, mods), src.details(mods)]);
       status.textContent = "";
-      const c = { D, det, cfg, mods: src.mods, enabled, labels: src.labels };
+      const c = { D, det, cfg, mods: src.mods, enabled, labels: D.labels, licenceNames: (G.X4Opt || {}).LICENCE_NAMES };
       // the mod switches, first thing on every page
       const toggles = cfg.sections.modToggles ? `<p class="modtoggles small">${r.kind === "index" ? "Ships" : "Equipment"} from: ${Object.entries(src.mods).map(([id, label]) => id === "swi"
         ? `<label><input type="checkbox" checked disabled> ${esc(label)}</label>`

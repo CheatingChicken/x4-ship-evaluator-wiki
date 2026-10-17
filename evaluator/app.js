@@ -92,6 +92,13 @@
     teladi: "Teladi Company", terran: "Terran Protectorate", trinity: "Realm of the Trinity", visitor: "Visitor",
     xenon: "Xenon", yaki: "Yaki" };
   const isSwi = (D.meta || {}).source === "wiki" || ((D.meta || {}).load_order || []).some((e) => /interworlds/i.test((e.name || "") + (e.id || "")));
+  // The game's names for ship classes (types) and purposes, from the data (export.labels), with the
+  // class's description from the game for tooltips; licence names from the shared table.
+  const LABELS = D.labels || { types: {}, purposes: {} };
+  const typeName = (t) => (t && LABELS.types[t] ? LABELS.types[t].name : t || "");
+  const typeTip = (t) => (t && LABELS.types[t] && LABELS.types[t].description) || "";
+  const licenceText = (l) => (l ? O.licenceName(l) + " licence" : "no licence");
+
   // Data from the wiki is always SWI: the base game's factions are always hidden there, no toggle.
   const wikiData = (D.meta || {}).source === "wiki";
   let hideVanilla = wikiData || !(storedState.display && storedState.display.hideVanilla === false);
@@ -125,6 +132,12 @@
   st.display = Object.assign({ showIds: false, shortFactions: true, hideVanilla: true }, st.display);
   st.factions = (st.factions || []).filter((f) => !vanilla(f));
   st.compare = Array.isArray(st.compare) ? st.compare : [];
+  // A picked ship the data no longer has (its submod switched off, a game update) would rank
+  // nothing: drop the pick and go back to the role from before it.
+  if (st.focus && !D.ships.some((x) => x.id === st.focus)) {
+    st.focus = null;
+    if (st.roleBeforeFocus) st.role = st.roleBeforeFocus;
+  }
   if (!Array.isArray(st.sort)) st.sort = st.sort && st.sort.key ? [st.sort] : [{ key: "score", asc: false }];  // older single-key form
   delete st.threat;  // single-choice threat of an earlier version; now st.threats (several)
   // Ships without a type were once listed as the sub-role "null"; they are "" now.
@@ -272,9 +285,9 @@
         changed(true);
       };
     } else {
-      // Sub-roles: the types of the ships combat ranks, as a compact multiselect. Types are grouped
-      // by the size most of their ships have (S, M, L, XL), alphabetical within a group; ships
-      // without a type are "(no type)", stored as "".
+      // Sub-roles: the classes (types) of the ships combat ranks, as a compact multiselect, by the
+      // game's class names. Grouped by the size most of their ships have (S, M, L, XL), alphabetical
+      // within a group; ships without a type are "(no class)", stored as "".
       const ORDER = ["xs", "s", "m", "l", "xl"];
       const counts = {}, bySize = {};
       D.ships.filter((s) => PF.roles.combat.purposes.includes(O.purposeGroup(s))).forEach((s) => {
@@ -283,7 +296,7 @@
         (bySize[t] = bySize[t] || {})[s.size] = (bySize[t][s.size] || 0) + 1;
       });
       const home = (t) => Object.entries(bySize[t]).sort((a, b) => b[1] - a[1] || ORDER.indexOf(a[0]) - ORDER.indexOf(b[0]))[0][0];
-      const label = (t) => t || "(no type)";
+      const label = (t) => (t ? typeName(t) : "(no class)");
       const groups = {};
       for (const t of Object.keys(counts)) (groups[home(t)] = groups[home(t)] || []).push(t);
       const sel = st.types.filter((t) => t in counts);
@@ -291,11 +304,11 @@
       opts.innerHTML = `<details class="msel" id="types"${typesUi.open ? " open" : ""}>
           <summary title="${esc(summary)}"><span class="msel-label">${esc(summary)}</span>${sel.length ? `<span class="msel-count">${sel.length}/${Object.keys(counts).length}</span>` : ""}</summary>
           <div class="msel-panel">
-            <div class="row nowrap"><input type="search" id="types-q" placeholder="Filter types…" value="${esc(typesUi.q)}">
+            <div class="row nowrap"><input type="search" id="types-q" placeholder="Filter classes…" value="${esc(typesUi.q)}">
               <button type="button" id="types-clear"${sel.length ? "" : " disabled"}>Clear</button></div>
             ${ORDER.filter((z) => groups[z]).map((z) => `<div class="msel-group"><div class="msel-head">${z.toUpperCase()}</div>` +
               groups[z].sort((a, b) => label(a).localeCompare(label(b))).map((t) =>
-                `<label class="check" data-name="${esc(label(t).toLowerCase())}"><input type="checkbox" data-t="${esc(t)}"${sel.includes(t) ? " checked" : ""}> ${esc(label(t))}<span class="n">${counts[t]}</span></label>`).join("") +
+                `<label class="check" data-name="${esc((label(t) + " " + t).toLowerCase())}" title="${esc(typeTip(t))}"><input type="checkbox" data-t="${esc(t)}"${sel.includes(t) ? " checked" : ""}> ${esc(label(t))}<span class="n">${counts[t]}</span></label>`).join("") +
               `</div>`).join("")}
           </div>
         </details>
@@ -375,7 +388,7 @@
   }
 
   // ---------------------------------------------------------------- single-ship mode
-  const shipOption = (x) => `${shipLabel(x)} · ${[x.size.toUpperCase(), x.type].filter(Boolean).join(" ")} (${x.id})`;
+  const shipOption = (x) => `${shipLabel(x)} · ${[x.size.toUpperCase(), typeName(x.type)].filter(Boolean).join(" ")} (${x.id})`;
 
   function renderFocus() {
     $("#ship-list").innerHTML = D.ships.slice().sort((a, b) => shipLabel(a).localeCompare(shipLabel(b)))
@@ -522,8 +535,7 @@
   // In-game relation scale: logarithmic, -30..+30 (-0.01 is -10, -1 is -30, 0.32 is +25).
   const relToUi = (r) => { const a = Math.abs(r || 0); return a < 0.001 ? 0 : Math.sign(r) * Math.round(10 * Math.log10(1000 * a)); };   // whole numbers, as the game shows
   const uiToRel = (u) => (u ? Math.sign(u) * Math.pow(10, Math.min(30, Math.abs(u)) / 10) / 1000 : 0);
-  const LICENCE_LABEL = { generaluseship: "Ships", militaryship: "Military ships", capitalship: "Capital ships",
-    generaluseequipment: "Equipment", militaryequipment: "Military equip.", capitalequipment: "Capital equip." };
+  const LICENCE_LABEL = O.LICENCE_NAMES;   // the same names everywhere (optimiser.js)
   // The licences the data actually asks for, in a sensible order.
   const licenceTypes = () => {
     const used = new Set([...D.ships, ...D.parts].map((x) => x.licence).filter(Boolean));
@@ -735,7 +747,8 @@
       { key: "name", label: "Ship", group: "Ship", cls: "txt", get: (r) => shipLabel(r.ship), fmt: (v, r) => `${v} <span class="sub id">${r.ship.id}</span>` },
       { key: "size", label: "Size", group: "Ship", get: (r) => r.ship.size.toUpperCase(), fmt: (v) => v,
         sortv: (r) => ["xs", "s", "m", "l", "xl"].indexOf(r.ship.size) },  // by magnitude, not alphabet
-      { key: "type", label: "Type", group: "Ship", cls: "txt", get: (r) => r.ship.type, fmt: (v) => v || "" },
+      { key: "type", label: "Class", group: "Ship", cls: "txt", get: (r) => typeName(r.ship.type),
+        fmt: (v, r) => `<span title="${esc(typeTip(r.ship.type))}">${esc(v)}</span>` },
     ].concat(hasThreats() ? [{ key: "threat", label: "Threat", group: "Ship", cls: "txt", get: (r) => threatLabel(r),
         fmt: (v, r) => `<span title="${memberScores(r)}">${v}</span>` }] : [], [
       { key: "source", label: "Equipment from", group: "Ship", cls: "txt", get: (r) => sourceLabel(r), fmt: (v, r) =>
@@ -923,8 +936,12 @@
       const pinned = pins.groups && i in pins.groups;
       slots += select("g" + i, `${g.kind} ${(g.size || "?").toUpperCase()} ×${g.count}${g.mining ? " ⛏" : ""}`, cand.groups[i], lo.groups[i], g.kind, pinned, true);
     });
+    // Wiki data knows each ship's wiki page ([submods/<mod>/]ships/<hull>/<key>), which the site's
+    // ship pages (and the wiki itself) serve beside this page.
+    const page = s.page && s.page.key ? `${s.origin && s.origin !== "swi" ? `submods/${s.origin}/` : ""}ships/${s.page.hull}/${s.page.key}` : "";
     el.innerHTML = `<div class="dhead"><h3>${shipLabel(s)}</h3><button type="button" id="detail-close" title="Close (Esc)" aria-label="Close">×</button></div>
-      <div class="muted small">${[`<span class="id">${s.id}</span>`, (s.size.toUpperCase() + " " + (s.type || "")).trim(), s.race, s.origin, "licence " + (s.licence || "none")].filter(Boolean).join(" · ")}</div>
+      ${page ? `<div class="small"><a href="./${esc(page)}" target="_blank" rel="noopener">Ship page ↗</a></div>` : ""}
+      <div class="muted small">${[`<span class="id">${s.id}</span>`, (s.size.toUpperCase() + " " + typeName(s.type)).trim(), s.race, s.origin, licenceText(s.licence)].filter(Boolean).join(" · ")}</div>
       <div class="muted small">Sold by: ${s.owners.map((f) => factionHtml(f)).join(", ")}</div>
       <div class="small">${r.threats.length ? `<b>${threatLabel(r)}</b> · ` : ""}equipment from <b>${sourceHtml(r)}</b>${r.mixedToo && sourceLabel(r) !== "Mixed" ? " · ★ best across all shipyards" : ""}</div>
       ${r.threats.length > 1 ? `<div class="muted small">Score per profile: ${memberScores(r)}</div>` : ""}
@@ -1095,7 +1112,7 @@
         <div class="row nowrap between"><b>${x.gone ? x.d.ship + " (no longer in the data)" : designName(x.d)}</b>
           <span>${i ? `<button type="button" data-cmp-base="${i}" title="Make this the baseline the others are measured against">◀ base</button>` : `<span class="muted small">baseline</span>`}
           <button type="button" data-cmp-rm="${i}" title="Remove">×</button></span></div>
-        ${x.gone ? "" : `<div class="muted small">${x.ship.size.toUpperCase()} ${x.ship.type || ""} <span class="id">${x.ship.id}</span></div>`}
+        ${x.gone ? "" : `<div class="muted small">${x.ship.size.toUpperCase()} ${esc(typeName(x.ship.type))} <span class="id">${x.ship.id}</span></div>`}
         <div class="muted small from">${designFromHtml(x.d)}</div>
         ${x.missing && x.missing.length ? `<div class="warn small" title="${x.missing.join(", ")}">${x.missing.length} part(s) no longer in the data: left empty</div>` : ""}
       </th>`).join("") + `</tr>`;

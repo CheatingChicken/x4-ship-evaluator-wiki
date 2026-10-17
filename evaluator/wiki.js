@@ -481,7 +481,9 @@
       const hangar = {};
       for (const h of s.hangar) { const key = h.docksize || "?"; hangar[key] = (hangar[key] || 0) + (h.capacity || 0); }
       outShips.push({ id: s.id, ware: s.w.ware, name: s.name || s.id, variation: s.variation, size: s.size, type: s.type,
-        purpose: s.purpose, race: s.race, origin: s.src, price: s.w.price || 0, owners: s.w.owners, licence: s.w.licence,
+        purpose: s.purpose, race: s.race, origin: s.src,
+        page: { hull: s.hull, key: s.key },   // its wiki page: [submods/<mod>/]ships/<hull>/<key>
+        price: s.w.price || 0, owners: s.w.owners, licence: s.w.licence,
         blueprintable: s.w.blueprintable, hull: P(s, "hull.max"), crew: P(s, "people.capacity"), mass: P(s, "physics.mass"),
         cargo, drones: P(s, "storage.unit"), missiles: P(s, "storage.missile"), hangar,
         groups, engines: engineRows, thrusters: thrusterRows });
@@ -493,14 +495,16 @@
     const short = Object.fromEntries([...sellers].filter((f) => facs[f] && facs[f].short && facs[f].short !== factions[f]).map((f) => [f, facs[f].short]));
     const cal = sup.calibration || {};
     return {
-      parts, ships: outShips, factions, faction_short: short, calibration: null,
+      parts, ships: outShips, factions, faction_short: short,
+      labels: sup.labels || { types: {}, purposes: {} },   // the game's names for ship types and purposes
+      calibration: null,
       calibration_default: { probe: cal.probe || null, game_version: cal.game_version || null },
       meta: { generated: new Date().toISOString(), source: "wiki", game_version: cal.game_version ? String(cal.game_version) : null,
         mods: ["swi"].concat(mods), load_order: sources.map((s2) => ({ id: s2.id, name: s2.label, version: "" })),
         supplement: sup.generated || null, notes: { unknown_storage: [...notes.unknownStorage].sort(), ships_without_ware: notes.noWare,
           defined_twice: [...overridden].sort() } },
       // the ship pages also get the game's display names for ship types and purposes
-      ...(det ? { details: Object.assign(det, { labels: sup.labels || { types: {}, purposes: {} } }) } : {}),
+      ...(det ? { details: det } : {}),
     };
   }
 

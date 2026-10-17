@@ -38,7 +38,7 @@ ok("routes");
   const D = S.merge(manifest, all.map((id) => chunks[id]));
   const det = S.mergeDetails(all.map((id) => JSON.parse(JSON.stringify(details[id]))));
   const mods = Object.fromEntries(manifest.mods.map((m) => [m.id, m.label]));
-  const c = { D, det, cfg: P.CONFIG, mods, enabled: Object.keys(W.MODS), labels: manifest.labels };
+  const c = { D, det, cfg: P.CONFIG, mods, enabled: Object.keys(W.MODS), labels: D.labels, licenceNames: O.LICENCE_NAMES };
 
   // every ship: its address finds it again, and its page renders every section it should
   for (const s of D.ships) {

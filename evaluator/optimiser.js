@@ -728,7 +728,16 @@
     TRIP.turn = Math.min(180, Math.max(0, +(cfg.turn != null ? cfg.turn : DEFAULTS.turn) || 0));
   }
 
-  const api = { METRIC_GROUPS, PURPOSE_GROUPS, DEFAULT_COMBAT_PURPOSES, purposeGroup, METRICS, ROLES, THREATS, DEFAULTS, configure, DEFAULT_TRIP, trip, DEFENCE_PARTS, defenceParts, sellerOk, factionSells, buyBlockers, evaluate, score, explain, objective, violation, rulesOf, useOf, HULL_METRICS, candidates, optimise, rank, variants, shortlist, applyFittedFloor };
+  /* LICENCE NAMES for the pages. The game has no faction-independent name for a licence type:
+   * every faction names its own ("Imperial Military Ships Access", "Ministry Military Ship
+   * Licence"), so the pages use these. No licence at all reads "None". */
+  const LICENCE_NAMES = {
+    generaluseship: "General use ship", militaryship: "Military ship", capitalship: "Capital ship",
+    generaluseequipment: "General use equipment", militaryequipment: "Military equipment", capitalequipment: "Capital equipment",
+  };
+  const licenceName = (l) => (l ? LICENCE_NAMES[l] || l : "None");
+
+  const api = { LICENCE_NAMES, licenceName, METRIC_GROUPS, PURPOSE_GROUPS, DEFAULT_COMBAT_PURPOSES, purposeGroup, METRICS, ROLES, THREATS, DEFAULTS, configure, DEFAULT_TRIP, trip, DEFENCE_PARTS, defenceParts, sellerOk, factionSells, buyBlockers, evaluate, score, explain, objective, violation, rulesOf, useOf, HULL_METRICS, candidates, optimise, rank, variants, shortlist, applyFittedFloor };
   root.X4Opt = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

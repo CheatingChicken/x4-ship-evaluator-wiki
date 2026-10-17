@@ -59,7 +59,7 @@
     const manifest = { format: FORMAT, version: VERSION, parts: data.parts.length,
       factions: data.factions, faction_short: data.faction_short, calibration: data.calibration,
       calibration_default: data.calibration_default, meta,
-      labels: (data.details && data.details.labels) || { types: {}, purposes: {} },   // display names (ship pages)
+      labels: data.labels || { types: {}, purposes: {} },   // the game's names for ship types and purposes
       mods: ids.map((id) => ({ id, label: id === CORE ? "SW Interworlds" : mods[id],
         ships: chunks[id].ships.length, parts: chunks[id].parts.length })) };
     return { manifest, chunks, details };
@@ -98,7 +98,8 @@
     const factions = Object.fromEntries([...sellers].sort().map((f) => [f, manifest.factions[f] || f]));
     const short = Object.fromEntries([...sellers].filter((f) => f in manifest.faction_short).map((f) => [f, manifest.faction_short[f]]));
     const order = manifest.mods.map((m) => m.id).filter((id) => loaded.has(id));
-    return { parts, ships, factions, faction_short: short, calibration: manifest.calibration,
+    return { parts, ships, factions, faction_short: short, labels: manifest.labels || { types: {}, purposes: {} },
+      calibration: manifest.calibration,
       calibration_default: manifest.calibration_default,
       meta: Object.assign({}, manifest.meta, { mods: order,
         load_order: (manifest.meta.load_order || []).filter((e) => loaded.has(e.id)) }) };
