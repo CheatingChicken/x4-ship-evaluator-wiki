@@ -6,8 +6,11 @@
 const { execFileSync } = require("child_process");
 const path = require("path");
 
+const script = path.join(__dirname, "..", "tools", "sync_shared.py");
+const run = (py) => execFileSync(py, [script, "--check"], { encoding: "utf-8" });
 try {
-  const out = execFileSync("python", [path.join(__dirname, "..", "tools", "sync_shared.py"), "--check"], { encoding: "utf-8" });
+  let out;
+  try { out = run("python"); } catch (e) { if (e.code !== "ENOENT") throw e; out = run("python3"); }  // Linux CI has python3
   process.stdout.write(out);
 } catch (e) {
   process.stdout.write(e.stdout || "");

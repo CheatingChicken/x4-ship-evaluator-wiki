@@ -1,12 +1,13 @@
 # Wiki JSON recorded for tests, and data built from it: their data, kept local, never published.
 tests/fixtures/
-# Generated locally from the game (published separately, once the hosting decision is made).
-supplement/*.json
+# supplement/supplement.json IS committed: the published site serves it (regenerate with the local
+# edition: python x4catalogue.py --supplement --out-supplement <this repo>/supplement).
 # The local version's generated files, if a sync or a test ever puts them here.
 evaluator/data.js
 evaluator/player.js
 
 dist/
+_site/
 .claude/
 __pycache__/
 *.pyc
