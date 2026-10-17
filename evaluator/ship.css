@@ -22,7 +22,9 @@ a.button { display: inline-block; background: var(--panel-2); color: var(--text)
 a.button:hover { border-color: var(--accent); text-decoration: none; }
 .modchip { font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--accent-dim);
   color: var(--accent); vertical-align: middle; }
-.modtoggles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; color: var(--muted); }
+/* the mod switches: a bar at the top of every page */
+.modtoggles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; color: var(--muted); margin: 0 0 8px;
+  padding: 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
 .modtoggles label { display: inline-flex; gap: 4px; align-items: center; color: var(--text); }
 .sizes { display: flex; gap: 6px; }
 .sizes a { padding: 2px 10px; border: 1px solid var(--line); border-radius: 10px; }
@@ -36,13 +38,18 @@ a.button:hover { border-color: var(--accent); text-decoration: none; }
 .shipmain h3 { font-size: 14px; margin: 14px 0 6px; }
 .shipmain p { line-height: 1.5; }
 
-/* option tables: the evaluator's table look without its sticky, clickable sort headers */
+/* tables: the evaluator's look without sticky headers; ship.js makes headers sort (th.sortable)
+ * and stripes the rows still shown (tr.alt) */
 .shippage .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; }
 .shippage th { position: static; cursor: default; vertical-align: bottom; font-size: 12px; line-height: 1.25; }
+.shippage th.sortable { cursor: pointer; }
+.shippage th.sortable:hover { color: var(--accent); }
 .shippage td { vertical-align: top; }
 .shippage td.name { white-space: normal; min-width: 170px; }
 .shippage table.narrow { width: auto; }
-.shippage tbody tr:nth-child(even) { background: var(--panel-2); }
+.shippage tbody tr.alt { background: var(--panel-2); }
+.listsearch { display: flex; gap: 10px; align-items: center; margin: 10px 0; }
+.listsearch input { width: min(420px, 100%); }
 
 .infobox { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px 10px; position: sticky; top: 8px; }
 .infobox table { font-size: 13px; }
@@ -50,7 +57,6 @@ a.button:hover { border-color: var(--accent); text-decoration: none; }
 .infobox td:first-child { text-align: left; color: var(--muted); }
 .infobox tr.ib-head th { text-align: left; padding-top: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); border-bottom: 1px solid var(--line); }
 .infobox td.sellers { text-align: left; color: var(--text); }
-.infobox tbody tr:nth-child(even) { background: none; }
 
 .loadout { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; background: var(--panel); }
 .loadout h3 { margin: 2px 0 6px; }

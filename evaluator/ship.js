@@ -318,11 +318,15 @@
       ["Price", (s) => cr(s.price)], ["Sold by", (s) => h.sellers(s.owners), { txt: true }],
     ], ships, "index");
   }
-  // ships grouped by size: a heading and a table per size (the wiki's full list layout)
+  // ships grouped by size: a heading and a table per size (the wiki's full list layout); the search
+  // hides a group with no hits
   const bySize = (c, ships, h) => HULLS.map((z) => {
     const list = ships.filter((s) => hullOf(c, s) === z);
-    return list.length ? `<h2 id="${z}">${z.toUpperCase()} <span class="muted">${list.length}</span></h2>` + shipTable(c, list, h) : "";
+    return list.length ? `<div class="sizegroup"><h2 id="${z}">${z.toUpperCase()} <span class="muted">${list.length}</span></h2>` + shipTable(c, list, h) + `</div>` : "";
   }).join("");
+  // the list pages' search box (wired up by wireSearch in the browser)
+  const searchBox = `<p class="listsearch"><input type="search" id="list-q" placeholder="Filter by name, class, purpose or seller…" autocomplete="off">` +
+    ` <span id="list-count" class="muted small"></span></p>`;
   const linkList = (items) => `<ul class="linklist">${items.map(([href, label, n]) =>
     `<li><a href="./${href}">${label}</a> <span class="muted small">${n}</span></li>`).join("")}</ul>`;
 
@@ -355,20 +359,85 @@
       }
       return { title: modName ? prefix : "Vessel Catalogue", html };
     }
-    if (r.list === "full") return { title: prefix + " – full list", html: crumbs("Full list") + head(prefix + " – full list", "full-list") + bySize(c, pool, h) };
+    if (r.list === "full") return { title: prefix + " – full list", html: crumbs("Full list") + head(prefix + " – full list", "full-list") + searchBox + bySize(c, pool, h) };
     if (r.list === "hull") {
       const sizes = `<p class="sizes">${HULLS.map((z) => `<a href="./${listPath(r.mod, z)}"${r.hull === z ? ` class="on"` : ""}>${z.toUpperCase()}</a>`).join("")}</p>`;
       const title = `${modName ? modName + " " : ""}${r.hull.toUpperCase()} ships`;
-      return { title, html: crumbs(r.hull.toUpperCase()) + head(title, r.hull) + sizes + shipTable(c, pool.filter((s) => hullOf(c, s) === r.hull), h) };
+      return { title, html: crumbs(r.hull.toUpperCase()) + head(title, r.hull) + sizes + searchBox + shipTable(c, pool.filter((s) => hullOf(c, s) === r.hull), h) };
     }
     const f = factionOf(c, r.code);
     if (!f) return null;
     const title = `${prefix} – ${c.D.factions[f] || f}`;
-    return { title, html: crumbs(c.D.factions[f] || f) + head(title, r.code, "Every ship this faction sells.") + bySize(c, pool.filter((s) => s.owners.includes(f)), h) };
+    return { title, html: crumbs(c.D.factions[f] || f) + head(title, r.code, "Every ship this faction sells.") + searchBox + bySize(c, pool.filter((s) => s.owners.includes(f)), h) };
   }
 
   // ---------------------------------------------------------------- browser
   const G = typeof self !== "undefined" ? self : globalThis;
+
+  // Zebra stripes on the rows still shown, in their current order (nth-child would count hidden rows).
+  function stripe(table) {
+    let i = 0;
+    for (const tr of table.tBodies[0].rows) tr.classList.toggle("alt", !tr.hidden && i++ % 2 === 1);
+  }
+  // A click on a header sorts its table by that column, a second click reverses it. Text columns
+  // (class "txt") sort A-Z first, number columns largest first; cells without a number ("—") go last.
+  function sortable(table) {
+    const ths = [...table.tHead.rows[0].cells];
+    ths.forEach((th, col) => {
+      th.classList.add("sortable");
+      th.title = th.title || "Sort by this column";
+      th.onclick = () => {
+        const text = th.classList.contains("txt");
+        const asc = th.classList.contains("sorted") ? !th.classList.contains("asc") : text;
+        ths.forEach((x) => x.classList.remove("sorted", "asc"));
+        th.classList.add("sorted");
+        if (asc) th.classList.add("asc");
+        const key = (tr) => {
+          const t = tr.cells[col].textContent.trim();
+          if (text) return t.toLowerCase();
+          const n = parseFloat(t.replace(/[^0-9.\-]/g, ""));
+          return isFinite(n) ? n : null;
+        };
+        const body = table.tBodies[0];
+        [...body.rows].map((tr) => [key(tr), tr])
+          .sort(([x], [y]) => (x === null ? (y === null ? 0 : 1) : y === null ? -1 : (x < y ? -1 : x > y ? 1 : 0) * (asc ? 1 : -1)))
+          .forEach(([, tr]) => body.appendChild(tr));
+        stripe(table);
+      };
+    });
+  }
+  // The list pages' search: every word must appear in the row's text, its sellers included (also
+  // the ones behind "+N more"). Groups without a hit are hidden; the query is kept in ?q=.
+  function wireSearch(root) {
+    const q = root.querySelector("#list-q"), count = root.querySelector("#list-count");
+    if (!q) return;
+    const rows = [...root.querySelectorAll("tbody tr")];
+    const hay = rows.map((tr) => (tr.textContent + " " + [...tr.querySelectorAll("[title]")].map((x) => x.title).join(" ")).toLowerCase());
+    const apply = () => {
+      const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+      let n = 0;
+      rows.forEach((tr, i) => { tr.hidden = !words.every((w) => hay[i].includes(w)); if (!tr.hidden) n++; });
+      root.querySelectorAll(".sizegroup").forEach((g) => {
+        const hits = g.querySelectorAll("tbody tr:not([hidden])").length, all = g.querySelectorAll("tbody tr").length;
+        g.hidden = !hits;
+        const label = g.querySelector("h2 .muted");
+        if (label) label.textContent = words.length ? `${hits} of ${all}` : String(all);
+      });
+      root.querySelectorAll("table").forEach(stripe);
+      count.textContent = words.length ? `${n} of ${rows.length} ships` : `${rows.length} ships`;
+      const url = new URL(location.href);
+      if (q.value.trim()) url.searchParams.set("q", q.value.trim()); else url.searchParams.delete("q");
+      history.replaceState(null, "", url);
+    };
+    q.value = new URLSearchParams(location.search).get("q") || "";
+    q.oninput = apply;
+    apply();
+  }
+  // after a render: sortable, striped tables (not the infobox) and the search box
+  function enhance(root) {
+    root.querySelectorAll("table").forEach((t) => { if (!t.closest(".infobox") && t.tHead && t.tBodies[0]) { sortable(t); stripe(t); } });
+    wireSearch(root);
+  }
   function boot() {
     const user = G.X4ShipConfig || {};
     const cfg = Object.assign({}, CONFIG, user, { sections: Object.assign({}, CONFIG.sections, user.sections) });
@@ -391,19 +460,22 @@
       const [D, det] = await Promise.all([src.load(null, mods), src.details(mods)]);
       status.textContent = "";
       const c = { D, det, cfg, mods: src.mods, enabled };
-      const toggles = cfg.sections.modToggles ? `<p class="modtoggles small">Equipment from: ${Object.entries(src.mods).map(([id, label]) => id === "swi"
+      // the mod switches, first thing on every page
+      const toggles = cfg.sections.modToggles ? `<p class="modtoggles small">${r.kind === "index" ? "Ships" : "Equipment"} from: ${Object.entries(src.mods).map(([id, label]) => id === "swi"
         ? `<label><input type="checkbox" checked disabled> ${esc(label)}</label>`
         : `<label title="Same choice as the evaluator's Settings → Mods"><input type="checkbox" data-mod="${esc(id)}"${mods.includes(id) ? " checked" : ""}${id === r.mod ? " disabled" : ""}> ${esc(label)}</label>`).join(" ")}</p>` : "";
       if (r.kind === "index") {
         const page = renderIndex(c, r);
         if (!page) return notFound(`No faction "${r.code}" sells ships here.`);
         document.title = page.title + " · X4 Ship Evaluator";
-        out.innerHTML = page.html + toggles;
+        out.innerHTML = toggles + page.html;
+        enhance(out);
       } else {
         const s = findShip(D, det, r);
         if (!s) return notFound(`No ship "${r.key}" among the ${r.hull.toUpperCase()} ships${r.mod !== "swi" ? " of " + (src.mods[r.mod] || r.mod) : ""}.`);
         document.title = `${s.name} · X4 Ship Evaluator`;
-        out.innerHTML = renderShip(c, s).replace("</header>", toggles + "</header>");
+        out.innerHTML = toggles + renderShip(c, s);
+        enhance(out);
         if (cfg.sections.loadouts && G.X4Opt) {
           setTimeout(() => {
             let html;
