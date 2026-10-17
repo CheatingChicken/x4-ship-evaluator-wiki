@@ -672,7 +672,8 @@
       if (ctx.role === "trader" && !((s.cargo[ctx.cargoType] || 0) > 0 && (s.purpose === "trade" || ctx.anyPurpose))) return false;
       if (ctx.role === "miner" && !(s.purpose === "mine" && s.cargo[ctx.cargoType] > 0)) return false;
       if (ctx.role === "combat" && !(ctx.combatPurposes || DEFAULT_COMBAT_PURPOSES).includes(purposeGroup(s))) return false;
-      if (ctx.role === "combat" && ctx.types && ctx.types.size && !ctx.types.has(s.type)) return false;
+      // Ships without a type (some wiki records) are the sub-role "" ("(no type)" on the page).
+      if (ctx.role === "combat" && ctx.types && ctx.types.size && !ctx.types.has(s.type || "")) return false;
       // Laser towers are deployable static defences, not ships to fly: only when asked for.
       if (ctx.role === "combat" && s.type === "lasertower" && !(ctx.types && ctx.types.has("lasertower"))) return false;
       if (ctx.priceBasis !== "fitted") {

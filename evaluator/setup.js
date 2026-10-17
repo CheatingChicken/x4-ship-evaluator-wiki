@@ -75,7 +75,7 @@
       <div class="row"><button type="button" id="fr-build" class="primary">Build from my game</button>
         <label class="check small"><input type="checkbox" id="fr-all"> include disabled mods</label></div>
       <p class="small" id="fr-status"></p>
-      <p class="muted small">Afterwards, import a save under ⚙ Settings → Save game so the ranking knows your licences and reputation.</p></section>`;
+      <p class="muted small">Afterwards, load a save under ⚙ Settings → Save file so the ranking knows your licences and reputation.</p></section>`;
     const build = document.querySelector("#fr-build"), status = document.querySelector("#fr-status");
     const refresh = async () => {
       const s = await box(document.querySelector("#fr-setup"), { onSaved: () => refresh() });

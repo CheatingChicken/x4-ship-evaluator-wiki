@@ -6,7 +6,7 @@
 <title>X4 Ship Evaluator</title>
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="no-detail">
 <header>
   <h1>X4 Ship Evaluator</h1>
   <div id="status"></div>
@@ -46,7 +46,7 @@
       <div id="price-basis" class="seg"></div>
     </section>
     <section>
-      <h2>Shipyards <span id="faction-count" class="muted"></span></h2>
+      <h2>Factions <span id="faction-count" class="muted"></span></h2>
       <label class="check" id="use-save-wrap"><input type="checkbox" id="use-save"> Use my save: licences + existing shipyards</label>
       <div class="row buttons">
         <button data-factions="all">All</button><button data-factions="none">None</button>
@@ -146,6 +146,21 @@
   </form>
 </dialog>
 
+<dialog id="savedata">
+  <form method="dialog" novalidate>
+    <div class="row between"><h2 class="title">Save data</h2><button value="close">Close</button></div>
+    <p class="small" id="sd-info"></p>
+    <div class="row">
+      <input type="search" id="sd-q" placeholder="Filter factions…">
+      <label class="check small"><input type="checkbox" id="sd-only"> Adjusted only</label>
+      <button type="button" id="sd-reset-all">Reset all to the imported save</button>
+    </div>
+    <div class="sd-scroll"><table id="sd-table"></table></div>
+    <p class="muted small">Relation on the in-game scale (−30 … +30): a faction docks you above −10. Licences decide what a faction sells
+      you; its shipyard sizes and equipment dock decide what it can sell at all. Your blueprints are under Player production in the sidebar.</p>
+  </form>
+</dialog>
+
 <dialog id="settings">
   <form method="dialog" novalidate>
     <div class="row between"><h2 class="title">Settings</h2><button value="close">Close</button></div>
@@ -154,6 +169,8 @@
       <h2>Display</h2>
       <label class="check"><input type="checkbox" id="opt-ids"> Show internal IDs (ship macros)</label>
       <label class="check"><input type="checkbox" id="opt-short"> Abbreviate faction names (in-game short names, e.g. IMP, KDY; full name on hover)</label>
+      <div class="row small">Table rows <div class="seg" id="opt-density"></div></div>
+      <label class="check"><input type="checkbox" id="opt-vanilla"> Hide the base game's factions (Argon, Teladi, …), which play no part under SW Interworlds</label>
     </section>
 
 
@@ -161,10 +178,12 @@
       <h2>Save file</h2>
       <p class="small" id="savefile-current"></p>
       <div class="row"><label class="filepick"><input type="file" id="savefile-input" accept=".gz,.xml"> Choose a save…</label>
+        <button type="button" id="savefile-adjust">Adjust save data…</button>
         <button type="button" id="savefile-forget">Forget it</button></div>
-      <p class="muted small">Pick or drop a save (<code>Documents\Egosoft\X4\&lt;number&gt;\save\*.xml.gz</code>). It is read here in the browser and never uploaded.
-        Licences, reputation, shipyards and your blueprints come from it.</p>
+      <div class="progress" id="savefile-progress" hidden><span></span></div>
       <p class="small" id="savefile-msg"></p>
+      <p class="muted small">Pick or drop a save (<code>Documents\Egosoft\X4\&lt;number&gt;\save\*.xml.gz</code>). It is read here in the browser and never uploaded.
+        Licences, reputation, shipyards and your blueprints come from it; <b>Adjust</b> lets you correct any of them by hand.</p>
     </section>
 
     <section id="wikimods" hidden>
@@ -174,14 +193,7 @@
       <p class="small" id="wikimods-msg"></p>
     </section>
 
-    <section class="server-only">
-      <h2>Save game (local server)</h2>
-      <p class="small" id="save-current"></p>
-      <div class="row"><select id="save-pick"></select><button type="button" id="save-import">Import</button></div>
-      <p class="muted small">Licences, reputation, shipyards and your blueprints are read from it. The page reloads when done.</p>
-    </section>
-
-    <section class="server-only">
+    <section class="server-only" hidden>
       <h2>Game data</h2>
       <div id="setup-box"></div>
       <p class="small" id="data-current"></p>
@@ -193,8 +205,6 @@
     </section>
 
     <p class="muted small" id="job-status"></p>
-    <p class="warn small" id="no-server" hidden>Save import and re-export need the local server: run <code>python serve.py</code>
-      and open http://localhost:8765/.</p>
 
     <section>
       <h2>Rating</h2>

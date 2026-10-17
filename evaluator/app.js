@@ -43,12 +43,63 @@
   const STORE = "x4eval.v1";
   const SIZES = ["s", "m", "l", "xl"];
 
+  /* SAVE EDITS. What the save import produced can be adjusted by hand (Settings → Save file →
+   * Adjust): per faction its relation, licences, shipyard sizes and equipment dock. The edits are
+   * kept apart from the import (st.saveEdits.factions[id], only the fields changed) and applied on
+   * top of an untouched copy of it, in place on the X4PLAYER object, so a new import keeps them and
+   * Reset brings the imported values back. Applied before anything reads the save. */
+  const DOCK_MIN = -0.01;   // docks while the relation is above this (import_save.py)
+  const PL_IMPORTED = PL ? JSON.parse(JSON.stringify(PL)) : null;
+  function applySaveEdits(edits) {
+    if (!PL) return;
+    const base = JSON.parse(JSON.stringify(PL_IMPORTED));
+    base.relations = base.relations || {}; base.access = base.access || {}; base.licences = base.licences || {}; base.galaxy = base.galaxy || {};
+    for (const [f, e] of Object.entries((edits && edits.factions) || {})) {
+      if (e.relation != null) {
+        base.relations[f] = e.relation;
+        base.access[f] = { relation: e.relation, dock: e.relation > DOCK_MIN };
+      }
+      if (Array.isArray(e.licences)) {
+        for (const t of new Set([...Object.keys(base.licences), ...e.licences])) {
+          base.licences[t] = (base.licences[t] || []).filter((x) => x !== f);
+          if (e.licences.includes(t)) base.licences[t].push(f);
+        }
+      }
+      if (Array.isArray(e.ships) || e.equipment != null) {
+        const g = base.galaxy[f] = base.galaxy[f] || { stations: 0, ships: [], equipment: false };
+        if (Array.isArray(e.ships)) g.ships = SIZES.filter((z) => e.ships.includes(z));
+        if (e.equipment != null) g.equipment = !!e.equipment;
+        if (g.ships.length || g.equipment) g.stations = Math.max(1, g.stations);
+      }
+    }
+    for (const k of ["licences", "relations", "access", "galaxy"]) PL[k] = base[k];
+  }
+  let storedState = {};
+  try { storedState = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (e) { /* private window */ }
+  applySaveEdits(storedState.saveEdits);
+
+  /* VANILLA FACTIONS. Under SW Interworlds the base game's factions still own wares but play no
+   * part in the galaxy, so in SWI data they are hidden everywhere (switchable in Settings →
+   * Display). A faction counts as vanilla when its id AND its name are the base game's: ids SWI
+   * reused under a new name (khaak as the Yuuzhan Vong, xenon as "Unknown Threat") stay. */
+  const VANILLA = { player: "Player", civilian: "Civilian", ownerless: "ownerless", alliance: "Alliance of the Word",
+    antigone: "Antigone Republic", argon: "Argon Federation", boron: "Queendom of Boron", buccaneers: "Duke's Buccaneers",
+    court: "Court of Curbs", fallensplit: "Fallen Families", freesplit: "Free Families", hatikvah: "Hatikvah Free League",
+    holyorder: "Holy Order of the Pontifex", holyorderfanatic: "Holy Order Faithful", kaori: "Quettanauts",
+    khaak: "Kha'ak", loanshark: "Vigor Syndicate", ministry: "Ministry of Finance", paranid: "Godrealm of the Paranid",
+    pioneers: "Segaris Pioneers", scaleplate: "Scale Plate Pact", scavenger: "Riptide Rakers", split: "Zyarth Patriarchy",
+    teladi: "Teladi Company", terran: "Terran Protectorate", trinity: "Realm of the Trinity", visitor: "Visitor",
+    xenon: "Xenon", yaki: "Yaki" };
+  const isSwi = (D.meta || {}).source === "wiki" || ((D.meta || {}).load_order || []).some((e) => /interworlds/i.test((e.name || "") + (e.id || "")));
+  let hideVanilla = !(storedState.display && storedState.display.hideVanilla === false);
+  const vanilla = (f) => hideVanilla && isSwi && f in VANILLA && (D.factions[f] || f) === VANILLA[f];
+
   // ---------------------------------------------------------------- state
   const defaults = () => ({
     role: "trader", cargoType: { trader: "container", miner: "solid" }, sizes: [], types: [],
     threats: { trader: ["safe", "contested", "dangerous"], miner: ["safe", "contested", "dangerous"] },
     sourcing: ["single", "mixed"], bestOnly: false, focus: null, profiles: {}, profile: null,
-    display: { showIds: true, shortFactions: false }, compare: [], compareDiff: false,
+    display: { showIds: false, shortFactions: true, hideVanilla: true }, compare: [], compareDiff: false,
     factions: defaultFactions(), useSave: !!PL, showAbsent: false, playerBuild: PL ? PL.blueprints.slice() : [],
     priceMin: 0, priceMax: 0, priceBasis: "hull", pins: {}, sort: [{ key: "score", asc: false }],
   });
@@ -57,19 +108,24 @@
   // the ware files name as a seller.
   const hostile = (f) => !!(PL && PL.access && PL.access[f] && !PL.access[f].dock);
   function defaultFactions() {
-    if (PL && PL.galaxy) return Object.keys(D.factions).filter((f) => PL.galaxy[f] && (PL.galaxy[f].ships.length || PL.galaxy[f].equipment) && !hostile(f));
-    return Object.keys(D.factions);
+    if (PL && PL.galaxy) return Object.keys(D.factions).filter((f) => !vanilla(f) && PL.galaxy[f] && (PL.galaxy[f].ships.length || PL.galaxy[f].equipment) && !hostile(f));
+    return Object.keys(D.factions).filter((f) => !vanilla(f));
   }
   const saveStamp = PL ? PL.save.file + "|" + PL.save.modified : null;
   let st = defaults();
-  try { Object.assign(st, JSON.parse(localStorage.getItem(STORE) || "{}")); } catch (e) { /* private window */ }
+  Object.assign(st, storedState);
+  st.saveEdits = st.saveEdits && typeof st.saveEdits === "object" ? st.saveEdits : { factions: {} };
+  st.saveEdits.factions = st.saveEdits.factions || {};
   // A newly imported save brings new reputations and shipyards: re-derive the faction defaults.
   if (saveStamp && st.saveStamp !== saveStamp) { st.factions = defaultFactions(); st.saveStamp = saveStamp; }
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(st)); } catch (e) { /* ignore */ } };
-  st.display = Object.assign({ showIds: true, shortFactions: false }, st.display);
+  st.display = Object.assign({ showIds: false, shortFactions: true, hideVanilla: true }, st.display);
+  st.factions = (st.factions || []).filter((f) => !vanilla(f));
   st.compare = Array.isArray(st.compare) ? st.compare : [];
   if (!Array.isArray(st.sort)) st.sort = st.sort && st.sort.key ? [st.sort] : [{ key: "score", asc: false }];  // older single-key form
   delete st.threat;  // single-choice threat of an earlier version; now st.threats (several)
+  // Ships without a type were once listed as the sub-role "null"; they are "" now.
+  st.types = (Array.isArray(st.types) ? st.types : []).map((t) => (t === "null" || t == null ? "" : t));
   const hasThreats = () => !!O.ROLES[st.role].threats;
   // ---------------------------------------------------------------- rating profile
   /* Every rating decision lives in the active profile (profile.js): weights, curves, references,
@@ -187,6 +243,14 @@
     el.onclick = (e) => { const v = e.target.dataset.v; if (v) onPick(v); };
   }
 
+  // The sub-role multiselect is rebuilt on every change; this keeps it open, with its filter text,
+  // across those rebuilds. A click anywhere else closes it.
+  const typesUi = { open: false, q: "" };
+  document.addEventListener("click", (e) => {
+    const det = document.getElementById("types");
+    if (det && det.open && !det.contains(e.target)) det.open = false;
+  });
+
   function renderFilters() {
     seg($("#roles"), Object.entries(O.ROLES).map(([k, r]) => [k, r.label]), st.role, (v) => { st.role = v; select(null); changed(true); });
     const opts = $("#role-options");
@@ -210,12 +274,48 @@
         changed(true);
       };
     } else {
-      const counts = {};
-      D.ships.filter((s) => PF.roles.combat.purposes.includes(O.purposeGroup(s))).forEach((s) => (counts[s.type] = (counts[s.type] || 0) + 1));
-      opts.innerHTML = `<div class="chips" id="types">` + Object.keys(counts).sort().map((t) =>
-        `<button data-v="${t}" class="${st.types.includes(t) ? "on" : ""}">${t} <span class="muted">${counts[t]}</span></button>`).join("") + `</div>
-        <p class="muted small">No sub-role selected = all combat ships.</p>`;
-      $("#types").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; toggle(st.types, b.dataset.v); changed(true); };
+      // Sub-roles: the types of the ships combat ranks, as a compact multiselect. Types are grouped
+      // by the size most of their ships have (S, M, L, XL), alphabetical within a group; ships
+      // without a type are "(no type)", stored as "".
+      const ORDER = ["xs", "s", "m", "l", "xl"];
+      const counts = {}, bySize = {};
+      D.ships.filter((s) => PF.roles.combat.purposes.includes(O.purposeGroup(s))).forEach((s) => {
+        const t = s.type || "";
+        counts[t] = (counts[t] || 0) + 1;
+        (bySize[t] = bySize[t] || {})[s.size] = (bySize[t][s.size] || 0) + 1;
+      });
+      const home = (t) => Object.entries(bySize[t]).sort((a, b) => b[1] - a[1] || ORDER.indexOf(a[0]) - ORDER.indexOf(b[0]))[0][0];
+      const label = (t) => t || "(no type)";
+      const groups = {};
+      for (const t of Object.keys(counts)) (groups[home(t)] = groups[home(t)] || []).push(t);
+      const sel = st.types.filter((t) => t in counts);
+      const summary = sel.length ? sel.map(label).sort().join(", ") : "All combat ships";
+      opts.innerHTML = `<details class="msel" id="types"${typesUi.open ? " open" : ""}>
+          <summary title="${esc(summary)}"><span class="msel-label">${esc(summary)}</span>${sel.length ? `<span class="msel-count">${sel.length}/${Object.keys(counts).length}</span>` : ""}</summary>
+          <div class="msel-panel">
+            <div class="row nowrap"><input type="search" id="types-q" placeholder="Filter types…" value="${esc(typesUi.q)}">
+              <button type="button" id="types-clear"${sel.length ? "" : " disabled"}>Clear</button></div>
+            ${ORDER.filter((z) => groups[z]).map((z) => `<div class="msel-group"><div class="msel-head">${z.toUpperCase()}</div>` +
+              groups[z].sort((a, b) => label(a).localeCompare(label(b))).map((t) =>
+                `<label class="check" data-name="${esc(label(t).toLowerCase())}"><input type="checkbox" data-t="${esc(t)}"${sel.includes(t) ? " checked" : ""}> ${esc(label(t))}<span class="n">${counts[t]}</span></label>`).join("") +
+              `</div>`).join("")}
+          </div>
+        </details>
+        <p class="muted small">None selected = all combat ships.</p>`;
+      const det = $("#types");
+      const filterTypes = () => {
+        const q = typesUi.q.trim().toLowerCase();
+        det.querySelectorAll(".msel-group").forEach((g) => {
+          let any = false;
+          g.querySelectorAll("label").forEach((l) => { const hit = !q || l.dataset.name.includes(q); l.hidden = !hit; any = any || hit; });
+          g.hidden = !any;
+        });
+      };
+      filterTypes();
+      det.ontoggle = () => { typesUi.open = det.open; if (det.open) $("#types-q").focus(); };
+      det.onchange = (e) => { const t = e.target.dataset.t; if (t === undefined) return; toggle(st.types, t); changed(true); };
+      $("#types-q").oninput = (e) => { typesUi.q = e.target.value; filterTypes(); };
+      $("#types-clear").onclick = () => { st.types = []; changed(true); };
     }
     $("#sourcing").innerHTML = [["single", "Single shipyard"], ["mixed", "Mixed"]].map(([v, l]) =>
       `<button data-v="${v}" class="${st.sourcing.includes(v) ? "on" : ""}">${l}</button>`).join("");
@@ -308,8 +408,11 @@
     return (req.length ? "Every " + req.join(", ") + " slot filled. " : "No slot required. ") + "Defence weight " + t.defence + ".";
   }
 
+  // Table density: vertical padding of the result rows (style.css --row-pad).
+  const DENSITIES = [["compact", "Compact"], ["normal", "Normal"], ["comfortable", "Comfortable"]];
   function applyDisplay() {
     document.body.classList.toggle("hide-ids", !st.display.showIds);
+    for (const [d] of DENSITIES) document.body.classList.toggle("density-" + d, (st.display.density || "normal") === d);
   }
 
   // ---------------------------------------------------------------- settings dialog
@@ -327,29 +430,26 @@
   async function renderSettings() {
     $("#opt-ids").checked = !!st.display.showIds;
     $("#opt-short").checked = !!st.display.shortFactions;
+    $("#opt-vanilla").checked = hideVanilla;
+    seg($("#opt-density"), DENSITIES, st.display.density || "normal", (v) => { st.display.density = v; applyDisplay(); save(); renderSettings(); });
+    $("#opt-vanilla").closest("label").hidden = !isSwi;
     renderSaveFile();
     renderWikiMods();
-    // Data from a source such as the wiki: there is no local server, so its sections and the
-    // "needs the local server" note would only confuse.
+    // Game data (re-export from the game files) only works with the local server (serve.py), so
+    // the section appears only when it answers, and never for data from a source such as the
+    // wiki. Saves are read in the browser (Save file) in every edition.
     const hosted = (D.meta || {}).source === "wiki";
-    document.querySelectorAll("#settings .server-only").forEach((x) => (x.hidden = hosted));
-    if (hosted) { $("#no-server").hidden = true; return; }
-    let status;
-    try { status = await api("/__status"); server = true; } catch (e) { server = false; }
-    serverControls().forEach((x) => (x.disabled = !server));
-    $("#no-server").hidden = server;
+    let status = null;
+    server = false;
+    if (!hosted) { try { status = await api("/__status"); server = true; } catch (e) { server = false; } }
+    document.querySelectorAll("#settings .server-only").forEach((x) => (x.hidden = !server));
     if (!server) return;
+    serverControls().forEach((x) => (x.disabled = false));
     window.X4Setup.box($("#setup-box"), { after: "Re-export below to rebuild the data from it." });
     const meta = status.data || {};
     $("#data-current").textContent = `Built ${String(meta.generated || "?").replace("T", " ")} from X4 ${meta.game_version || "?"} with ${(meta.load_order || []).length} extensions.`;
     $("#load-order").innerHTML = (meta.load_order || []).map((e) => `<li>${e.name || e.id} <span class="muted">${e.version || ""}</span></li>`).join("");
-    $("#save-current").textContent = status.save
-      ? `Current: ${status.save.file} — ${status.save.player || ""}, ${String(status.save.modified || "").replace("T", " ")}`
-      : "No save imported yet.";
     jobLine(status);
-    const saves = await api("/__saves");
-    $("#save-pick").innerHTML = saves.saves.map((x) =>
-      `<option value="${x.file}" ${status.save && status.save.file === x.file ? "selected" : ""}>${x.file} — ${x.player || "?"}, ${x.modified.replace("T", " ")}${x.money != null ? ", " + money(x.money) + " Cr" : ""}</option>`).join("");
   }
 
   function jobLine(status) {
@@ -380,23 +480,100 @@
   function renderSaveFile() {
     const sec = $("#savefile");
     if (!window.X4Save) { sec.hidden = true; return; }
-    $("#savefile-current").textContent = PL ? `In use: ${PL.save.file} — ${PL.save.player || "?"}, ${String(PL.save.modified || "").replace("T", " ")}${PL.save.loaded === "browser" ? " (loaded in this browser)" : " (imported by the local server)"}` : "No save loaded.";
+    const edited = Object.keys(st.saveEdits.factions).length;
+    $("#savefile-current").textContent = PL ? `In use: ${PL.save.file} — ${PL.save.player || "?"}, ${String(PL.save.modified || "").replace("T", " ")}${PL.save.loaded === "browser" ? " (loaded in this browser)" : " (imported by the local server)"}` +
+      (edited ? ` · ${edited} faction${edited === 1 ? "" : "s"} adjusted by hand` : "") : "No save loaded.";
     $("#savefile-forget").hidden = !(PL && PL.save.loaded === "browser");
+    $("#savefile-adjust").disabled = !PL;
+    $("#savefile-adjust").title = PL ? "" : "Load a save first";
   }
+  // Reading a save: a bar with percent, MB read and time, from the compressed bytes consumed.
   async function loadSaveFile(file) {
-    const msg = $("#savefile-msg");
+    const msg = $("#savefile-msg"), bar = $("#savefile-progress");
     if (!file) return;
     if (!/\.xml(\.gz)?$/i.test(file.name)) { msg.className = "small warn"; msg.textContent = "Pick an X4 save: a .xml.gz (or .xml) file from your save folder."; return; }
     msg.className = "small";
+    bar.hidden = false;
+    const fill = bar.querySelector("span"), t0 = Date.now(), mb = (n) => (n / 1e6).toFixed(0);
+    fill.style.width = "0%";
     try {
-      const player = await window.X4Save.readFile(file, (p) => { msg.textContent = `Reading ${file.name}: ${Math.round((100 * p.read) / p.total)}%`; });
+      const player = await window.X4Save.readFile(file, (p) => {
+        const pct = Math.min(100, Math.round((100 * p.read) / p.total));
+        fill.style.width = pct + "%";
+        msg.textContent = `Reading ${file.name}: ${pct}% · ${mb(p.read)} of ${mb(p.total)} MB · ${Math.round((Date.now() - t0) / 1000)} s`;
+      });
+      fill.style.width = "100%";
       await window.X4Save.store(player);
-      msg.textContent = `Read ${player.save.player || "the save"}: ${Object.keys(player.licences).length} licence types, ${player.blueprints.length} blueprints. Reloading…`;
-      setTimeout(() => location.reload(), 600);
+      msg.textContent = `Read ${player.save.player || "the save"} in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${Object.keys(player.licences).length} licence types, ${player.blueprints.length} blueprints. Reloading…`;
+      setTimeout(() => location.reload(), 700);
     } catch (e) {
+      bar.hidden = true;
       msg.className = "small warn";
       msg.textContent = "Could not read this save: " + e.message;
     }
+  }
+
+  // ---------------------------------------------------------------- save data editor
+  // In-game relation scale: logarithmic, -30..+30 (-0.01 is -10, -1 is -30, 0.32 is +25).
+  const relToUi = (r) => { const a = Math.abs(r || 0); return a < 0.001 ? 0 : Math.sign(r) * Math.round(10 * Math.log10(1000 * a)); };   // whole numbers, as the game shows
+  const uiToRel = (u) => (u ? Math.sign(u) * Math.pow(10, Math.min(30, Math.abs(u)) / 10) / 1000 : 0);
+  const LICENCE_LABEL = { generaluseship: "Ships", militaryship: "Military ships", capitalship: "Capital ships",
+    generaluseequipment: "Equipment", militaryequipment: "Military equip.", capitalequipment: "Capital equip." };
+  // The licences the data actually asks for, in a sensible order.
+  const licenceTypes = () => {
+    const used = new Set([...D.ships, ...D.parts].map((x) => x.licence).filter(Boolean));
+    return Object.keys(LICENCE_LABEL).filter((t) => used.has(t)).concat([...used].filter((t) => !(t in LICENCE_LABEL)).sort());
+  };
+  const sdUi = { q: "", only: false };
+  // A faction's values in the save in use (with edits), or in the untouched import.
+  function factionNow(f, src) {
+    src = src || PL;
+    const a = (src.access || {})[f], g = (src.galaxy || {})[f];
+    return { relation: a ? a.relation : (src.relations || {})[f] || 0, dock: a ? a.dock : true,
+      licences: Object.keys(src.licences || {}).filter((t) => (src.licences[t] || []).includes(f)),
+      ships: g ? g.ships.slice() : [], equipment: !!(g && g.equipment) };
+  }
+  function renderSaveData() {
+    const lic = licenceTypes(), q = sdUi.q.trim().toLowerCase();
+    const edits = st.saveEdits.factions;
+    $("#sd-info").textContent = `${PL.save.file} — ${PL.save.player || "?"} · ${Object.keys(edits).length} faction(s) adjusted`;
+    const ids = Object.keys(D.factions).filter((f) => !vanilla(f)).sort((a, b) => factionName(a).localeCompare(factionName(b)))
+      .filter((f) => (!q || factionName(f).toLowerCase().includes(q) || f.includes(q)) && (!sdUi.only || edits[f]));
+    $("#sd-table").innerHTML = `<thead><tr><th>Faction</th><th title="In-game scale -30 … +30">Relation</th><th>Docks</th>` +
+      lic.map((t) => `<th class="sd-c" title="${esc(t)}">${esc(LICENCE_LABEL[t] || t)}</th>`).join("") +
+      `<th class="sd-c sd-gap" title="Ship sizes its shipyards build">Shipyard</th><th class="sd-c" title="Has an equipment dock">Equip.</th><th></th></tr></thead><tbody>` +
+      ids.map((f) => {
+        const n = factionNow(f), e = edits[f] || {}, mark = (k) => (k in e ? " sd-edited" : "");
+        return `<tr data-f="${esc(f)}" class="${edits[f] ? "edited" : ""}"><td>${esc(factionName(f))}</td>
+          <td class="${mark("relation")}"><input type="number" data-k="relation" min="-30" max="30" step="any" value="${relToUi(n.relation)}"></td>
+          <td>${n.dock ? `<span class="rel pos">✓</span>` : `<span class="rel neg" title="Hostile: will not dock you">✕</span>`}</td>` +
+          lic.map((t) => `<td class="sd-c${mark("licences")}"><input type="checkbox" data-k="lic" data-t="${esc(t)}"${n.licences.includes(t) ? " checked" : ""}></td>`).join("") +
+          `<td class="sd-c sd-gap${mark("ships")}"><span class="sd-sizes">${SIZES.map((z) => `<label title="${z.toUpperCase()} shipyard"><input type="checkbox" data-k="ship" data-z="${z}"${n.ships.includes(z) ? " checked" : ""}>${z.toUpperCase()}</label>`).join("")}</span></td>
+          <td class="sd-c${mark("equipment")}"><input type="checkbox" data-k="equip"${n.equipment ? " checked" : ""}></td>
+          <td>${edits[f] ? `<button type="button" data-reset="${esc(f)}" title="Back to the imported values">↺</button>` : ""}</td></tr>`;
+      }).join("") + `</tbody>`;
+  }
+  // One field changed for one faction: store it as an edit (dropped again when it equals the import).
+  function onSaveDataChange(e) {
+    const tr = e.target.closest("tr[data-f]"), k = e.target.dataset.k;
+    if (!tr || !k) return;
+    const f = tr.dataset.f, n = factionNow(f), imported = factionNow(f, PL_IMPORTED);
+    const ed = st.saveEdits.factions[f] = st.saveEdits.factions[f] || {};
+    if (k === "relation") ed.relation = uiToRel(Math.max(-30, Math.min(30, Number(e.target.value) || 0)));
+    else if (k === "lic") ed.licences = e.target.checked ? [...new Set(n.licences.concat(e.target.dataset.t))] : n.licences.filter((t) => t !== e.target.dataset.t);
+    else if (k === "ship") ed.ships = e.target.checked ? SIZES.filter((z) => n.ships.includes(z) || z === e.target.dataset.z) : n.ships.filter((z) => z !== e.target.dataset.z);
+    else if (k === "equip") ed.equipment = e.target.checked;
+    // Drop fields that are back at the imported value, and the faction when nothing is left.
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    if ("relation" in ed && Math.abs(relToUi(ed.relation) - relToUi(imported.relation)) < 0.05) delete ed.relation;
+    if ("licences" in ed && same(ed.licences.slice().sort(), imported.licences.slice().sort())) delete ed.licences;
+    if ("ships" in ed && same(ed.ships, imported.ships)) delete ed.ships;
+    if ("equipment" in ed && ed.equipment === imported.equipment) delete ed.equipment;
+    if (!Object.keys(ed).length) delete st.saveEdits.factions[f];
+    applySaveEdits(st.saveEdits);
+    renderSaveData();
+    renderSaveFile();
+    changed(true);
   }
   function renderWikiMods() {
     const sec = $("#wikimods"), src = window.X4Source;
@@ -424,7 +601,24 @@
     $("#wikimods-reload").onclick = () => location.reload();
     $("#opt-ids").onchange = (e) => { st.display.showIds = e.target.checked; applyDisplay(); save(); };
     $("#opt-short").onchange = (e) => { st.display.shortFactions = e.target.checked; save(); if (last) { renderTable(); renderDetail(); } };
-    $("#save-import").onclick = () => runAction("/__import", { save: $("#save-pick").value }, "Importing " + $("#save-pick").value);
+    $("#opt-vanilla").onchange = (e) => {
+      hideVanilla = st.display.hideVanilla = e.target.checked;
+      if (hideVanilla) st.factions = st.factions.filter((f) => !vanilla(f));
+      changed(true);
+    };
+    $("#savefile-adjust").onclick = () => { if (!PL) return; renderSaveData(); $("#savedata").showModal(); };
+    $("#savedata").onchange = (e) => { if (e.target.id === "sd-only") { sdUi.only = e.target.checked; renderSaveData(); } else onSaveDataChange(e); };
+    $("#sd-q").oninput = (e) => { sdUi.q = e.target.value; renderSaveData(); };
+    $("#savedata").onclick = (e) => {
+      const f = e.target.dataset && e.target.dataset.reset;
+      if (f == null) return;
+      delete st.saveEdits.factions[f];
+      applySaveEdits(st.saveEdits); renderSaveData(); renderSaveFile(); changed(true);
+    };
+    $("#sd-reset-all").onclick = () => {
+      st.saveEdits.factions = {};
+      applySaveEdits(st.saveEdits); renderSaveData(); renderSaveFile(); changed(true);
+    };
     $("#data-export").onclick = () => runAction("/__export", { all: $("#export-all").checked }, "Re-export");
     $("#pins-clear").onclick = () => { st.pins = {}; changed(); $("#job-status").textContent = "Pinned parts cleared."; };
     $("#all-reset").onclick = () => {
@@ -441,15 +635,21 @@
     const sells = {};
     D.ships.forEach((s) => s.owners.forEach((f) => (sells[f] = (sells[f] || 0) + 1)));
     const G = PL && PL.galaxy;
-    const ids = Object.keys(D.factions).sort((a, b) => factionName(a).localeCompare(factionName(b)))
+    const ids = Object.keys(D.factions).filter((f) => !vanilla(f)).sort((a, b) => factionName(a).localeCompare(factionName(b)))
       .filter((f) => !q || factionName(f).toLowerCase().includes(q) || f.includes(q));
     const present = G ? ids.filter((f) => G[f]) : ids, absent = G ? ids.filter((f) => !G[f]) : [];
     const row = (f) => {
       const g = G && G[f];
-      const yard = g ? (g.ships.length ? "yard " + g.ships.join("/").toUpperCase() : g.equipment ? "equipment" : "no yard") : (sells[f] || 0) + " ships";
+      // Right column: the ship sizes its shipyards build (from the save), compact, with the meaning
+      // in the tooltip; without a save, how many ships it sells.
+      const [yard, yardTip] = g
+        ? (g.ships.length ? [g.ships.join("/").toUpperCase(), "Shipyards build " + g.ships.join(", ").toUpperCase() + " ships" + (g.equipment ? "; sells equipment" : "")]
+          : g.equipment ? ["equip.", "Equipment dock only, no shipyard"] : ["—", "No shipyard or equipment dock"])
+        : [(sells[f] || 0) + " ships", "Ships this faction sells"];
       const a = PL && PL.access && PL.access[f];
-      const rel = a ? `<span class="rel ${a.dock ? (a.relation > 0.0099 ? "pos" : "") : "neg"}" title="relation ${a.relation >= 0 ? "+" : ""}${a.relation}${a.dock ? "" : " — hostile: their stations will not dock you"}">${a.dock ? (a.relation > 0.0099 ? "▲" : "●") : "✕"}</span>` : "";
-      return `<label class="check ${hostile(f) ? "hostile" : ""}"><input type="checkbox" data-f="${f}" ${st.factions.includes(f) ? "checked" : ""}> ${rel}${factionName(f)}<span class="n">${yard}</span></label>`;
+      // The relation marker always takes its column (empty without a save) so names line up.
+      const rel = a ? `<span class="rel ${a.dock ? (a.relation > 0.0099 ? "pos" : "") : "neg"}" title="relation ${a.relation >= 0 ? "+" : ""}${a.relation}${a.dock ? "" : " — hostile: their stations will not dock you"}">${a.dock ? (a.relation > 0.0099 ? "▲" : "●") : "✕"}</span>` : `<span class="rel"></span>`;
+      return `<label class="check frow ${hostile(f) ? "hostile" : ""}"><input type="checkbox" data-f="${f}" ${st.factions.includes(f) ? "checked" : ""}>${rel}<span class="fname">${factionName(f)}</span><span class="n" title="${yardTip}">${yard}</span></label>`;
     };
     $("#factions").innerHTML = present.map(row).join("") + (absent.length
       ? `<label class="check muted small"><input type="checkbox" id="show-absent" ${st.showAbsent ? "checked" : ""}> ${absent.length} not in your galaxy (no stations in the save)</label>` +
@@ -527,7 +727,7 @@
     ].concat(hasThreats() ? [{ key: "threat", label: "Threat", group: "Ship", cls: "txt", get: (r) => threatLabel(r),
         fmt: (v, r) => `<span title="${memberScores(r)}">${v}</span>` }] : [], [
       { key: "source", label: "Equipment from", group: "Ship", cls: "txt", get: (r) => sourceLabel(r), fmt: (v, r) =>
-        `${sourceHtml(r)}${r.mixedToo && v !== "Mixed" ? ` <span class="best" title="The mixed search over every selected shipyard found this same loadout: no combination does better">★</span>` : ""}` },
+        `${sourceCellHtml(r)}${r.mixedToo && v !== "Mixed" ? ` <span class="best" title="The mixed search over every selected shipyard found this same loadout: no combination does better">★</span>` : ""}` },
       { key: "hull", label: "Hull price", group: "Price", get: (r) => r.ship.price, fmt: money },
       { key: "fitted", label: "Fitted", group: "Price", get: (r) => r.metrics.price, fmt: money },
     ]).concat(metricCols, [{ key: "sellers", label: "Sold by", group: "Market", cls: "txt sellers",
@@ -538,15 +738,21 @@
   // they have a shipyard for its size, will dock you and have licensed you for it (without a save:
   // the faction is selected). Owners with no stations in the galaxy are only counted.
   function sellers(ship) {
-    return ship.owners.map((f) => {
+    return ship.owners.filter((f) => !vanilla(f)).map((f) => {
       const why = O.buyBlockers(f, ship, PL);
       return { f, name: factionName(f), why: why || [], ok: why ? !why.length : st.factions.includes(f),
                absent: !!(PL && PL.galaxy && !PL.galaxy[f]) };
     }).sort((a, b) => b.ok - a.ok || a.name.localeCompare(b.name));
   }
 
+  // One line per row (an ellipsis when it does not fit); the whole list is in the tooltip.
   function sellersHtml(ship) {
     const all = sellers(ship), shown = all.filter((x) => !x.absent), absent = all.length - shown.length;
+    const yes = shown.filter((x) => x.ok).map((x) => x.name), no = shown.filter((x) => !x.ok).map((x) => x.name);
+    const tip = [yes.length ? "Sells to you: " + yes.join(", ") : "", no.length ? "Won't: " + no.join(", ") : ""].filter(Boolean).join("\n");
+    return `<div class="sellers-line" title="${esc(tip)}">` + sellersInner(all, shown, absent) + `</div>`;
+  }
+  function sellersInner(all, shown, absent) {
     return shown.map((x) => {
       const tip = x.ok ? "Will sell you this ship" + (st.factions.includes(x.f) ? "" : " (not among your selected factions)")
                        : x.why.length ? "Will not sell to you: " + x.why.join("; ") : "Not among your selected factions";
@@ -560,6 +766,15 @@
   // and the threat profiles this one fit serves.
   const sourceLabel = (r) => { const f = r.sources.filter((x) => x !== "mixed"); return f.length ? f.map(factionName).join(" / ") : "Mixed"; };
   const sourceHtml = (r) => { const f = r.sources.filter((x) => x !== "mixed"); return f.length ? f.map((x) => factionHtml(x)).join(" / ") : "Mixed"; };
+  // The table cell: up to three shipyards; beyond that the first two and a "+N more" chip whose
+  // tooltip names the rest (the detail pane keeps the full list).
+  const sourceCellHtml = (r) => {
+    const f = r.sources.filter((x) => x !== "mixed");
+    if (f.length <= 3) return sourceHtml(r);
+    const rest = f.slice(2);
+    return f.slice(0, 2).map((x) => factionHtml(x)).join(" / ") +
+      ` <span class="more-chip" title="Also: ${esc(rest.map(factionName).join(", "))}">+${rest.length} more</span>`;
+  };
   const threatLabel = (r) => r.threats.map((t) => O.THREATS[t].label).join(" · ");
   const memberScores = (r) => [...new Set(r.members.map((m) => m.threat))].map((t) =>
     `${O.THREATS[t] ? O.THREATS[t].label : ""} ${fmt(Math.max(...r.members.filter((m) => m.threat === t).map((m) => m.score)), 1)}`).join(", ");
@@ -645,7 +860,9 @@
   function renderDetail() {
     const el = $("#detail");
     const r = last.results.find((x) => x.key === selected);
-    if (!r) { el.innerHTML = `<p class="muted">Select a ship to see and edit its loadout.</p>`; return; }
+    // The drawer only takes room while a loadout is selected.
+    document.body.classList.toggle("no-detail", !r);
+    if (!r) { el.innerHTML = ""; return; }
     const s = r.ship, m = r.metrics, lo = r.loadout;
     const cand = O.candidates(D, s, r.ctx);  // this row's shipyard(s) and threat rules
     const pins = st.pins[r.key] || {};
