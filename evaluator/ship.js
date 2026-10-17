@@ -117,7 +117,17 @@
     const modChip = (id) => (id && id !== "swi" && c.mods[id] ? ` <span class="modchip" title="${esc(c.mods[id])}">${esc(id.toUpperCase())}</span>` : "");
     const partMod = (p) => (p.kind === "thruster" ? "" : modChip((det.parts[p.id] || {}).mod));
     const partName = (p) => `${esc(p.name)}${p.mk && !/\bmk\s*\d/i.test(p.name) ? ` <span class="muted small">Mk${p.mk}</span>` : ""}${partMod(p)}`;
-    return { fname, sellers, licence, build, modChip, partName };
+    // the game's display names for ship types and purposes (supplement labels); the id, and for a
+    // type the game's description, on hover, so a search for the id still finds the row
+    const labels = c.labels || { types: {}, purposes: {} };
+    const typeText = (t) => (t && labels.types[t] ? labels.types[t].name : t || "");
+    const typeName = (t) => {
+      if (!t) return "—";
+      const l = labels.types[t];
+      return l ? `<span title="${esc((l.description ? l.description + "\n\n" : "") + t)}">${esc(l.name)}</span>` : esc(t);
+    };
+    const purposeName = (x) => (x ? `<span title="${esc(x)}">${esc(labels.purposes[x] || x)}</span>` : "—");
+    return { fname, sellers, licence, build, modChip, partName, typeText, typeName, purposeName };
   }
 
   // A table with a header row and one row per item. cols: [label, cell(item) -> html, { txt, name, title }]:
@@ -157,8 +167,8 @@
     const head = (t) => `<tr class="ib-head"><th colspan="2">${t}</th></tr>`;
     const price = d.price || {};
     return `<aside class="infobox">${image || ""}<table>
-      ${head("Ship")}${row("Identifier", `<code>${esc(s.ware)}</code>`)}${row("Size", s.size.toUpperCase())}${row("Class", esc(s.type || "—"))}
-      ${row("Purpose", esc(s.purpose || "—"))}${row("Licence", h.licence(s.licence))}
+      ${head("Ship")}${row("Identifier", `<code>${esc(s.ware)}</code>`)}${row("Size", s.size.toUpperCase())}${row("Class", h.typeName(s.type))}
+      ${row("Purpose", h.purposeName(s.purpose))}${row("Licence", h.licence(s.licence))}
       ${d.supply != null ? row("Maintenance supply cost", num(d.supply, 0)) : ""}
       ${head("Base stats")}${row("Hull", num(s.hull, 0))}${d.radar != null ? row("Radar range", num(d.radar / 1000, 1) + " km") : ""}${row("Mass", num(s.mass, 1) + " t")}
       ${head("Storage")}${["container", "solid", "liquid", "condensate"].map((t) => row(t[0].toUpperCase() + t.slice(1), num(cargo[t] || 0, 0))).join("")}
@@ -313,7 +323,7 @@
       on.turrets ? turrets(c, s, h) : "",
     ].join("");
     return `${crumbs}<header class="shiphead"><h1>${on.icons ? classIcon(c, s) : ""}${esc(s.name)}${h.modChip(s.origin)}</h1>
-        <p class="muted">${esc(s.size.toUpperCase())} ${esc(s.type || "")}${s.variation ? " · " + esc(s.variation) : ""}</p>
+        <p class="muted">${esc(s.size.toUpperCase())} ${esc(h.typeText(s.type))}${s.variation ? " · " + esc(s.variation) : ""}</p>
         ${links.length ? `<p class="links">${links.join(" ")}</p>` : ""}</header>
       <div class="shipgrid${on.infobox ? "" : " noinfo"}"><div class="shipmain">${on.image && !on.infobox ? shipImage(c, s, d) : ""}${main}</div>` +
       `${on.infobox ? infobox(c, s, d, h, on.image ? shipImage(c, s, d) : "") : ""}</div>`;
@@ -334,7 +344,7 @@
     };
     return table([
       ["Ship", (s) => `${icon(s)}<a href="./${shipPath(s, c.det)}">${esc(s.name)}</a>${h.modChip(s.origin)}`, { txt: true, name: true }],
-      ["Class", (s) => esc(s.type || "—"), { txt: true }], ["Purpose", (s) => esc(s.purpose || "—"), { txt: true }],
+      ["Class", (s) => h.typeName(s.type), { txt: true }], ["Purpose", (s) => h.purposeName(s.purpose), { txt: true }],
       ["Hull", (s) => num(s.hull, 0)], ["Cargo", (s) => num(Math.max(0, ...Object.values(s.cargo || {})), 0)],
       ["Hangar", (s) => num(((s.hangar || {}).dock_s || 0) + ((s.hangar || {}).dock_m || 0), 0)],
       ["Price", (s) => cr(s.price)], ["Sold by", (s) => h.sellers(s.owners), { txt: true }],
@@ -488,7 +498,7 @@
       status.textContent = "Loading ship data…";
       const [D, det] = await Promise.all([src.load(null, mods), src.details(mods)]);
       status.textContent = "";
-      const c = { D, det, cfg, mods: src.mods, enabled };
+      const c = { D, det, cfg, mods: src.mods, enabled, labels: src.labels };
       // the mod switches, first thing on every page
       const toggles = cfg.sections.modToggles ? `<p class="modtoggles small">${r.kind === "index" ? "Ships" : "Equipment"} from: ${Object.entries(src.mods).map(([id, label]) => id === "swi"
         ? `<label><input type="checkbox" checked disabled> ${esc(label)}</label>`

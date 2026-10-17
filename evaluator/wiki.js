@@ -499,7 +499,8 @@
         mods: ["swi"].concat(mods), load_order: sources.map((s2) => ({ id: s2.id, name: s2.label, version: "" })),
         supplement: sup.generated || null, notes: { unknown_storage: [...notes.unknownStorage].sort(), ships_without_ware: notes.noWare,
           defined_twice: [...overridden].sort() } },
-      ...(det ? { details: det } : {}),
+      // the ship pages also get the game's display names for ship types and purposes
+      ...(det ? { details: Object.assign(det, { labels: sup.labels || { types: {}, purposes: {} } }) } : {}),
     };
   }
 

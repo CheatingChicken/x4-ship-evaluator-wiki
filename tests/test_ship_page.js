@@ -38,7 +38,7 @@ ok("routes");
   const D = S.merge(manifest, all.map((id) => chunks[id]));
   const det = S.mergeDetails(all.map((id) => JSON.parse(JSON.stringify(details[id]))));
   const mods = Object.fromEntries(manifest.mods.map((m) => [m.id, m.label]));
-  const c = { D, det, cfg: P.CONFIG, mods, enabled: Object.keys(W.MODS) };
+  const c = { D, det, cfg: P.CONFIG, mods, enabled: Object.keys(W.MODS), labels: manifest.labels };
 
   // every ship: its address finds it again, and its page renders every section it should
   for (const s of D.ships) {
@@ -81,6 +81,9 @@ ok("routes");
   const wikiImp = 41, wikiHap = 17;
   assert.strictEqual(rows(P.renderIndex(swiOnly, P.route("ships/imp"))), wikiImp, "Galactic Empire list");
   assert.strictEqual(rows(P.renderIndex(swiOnly, P.route("ships/hap"))), wikiHap, "Hapes list");
+  // the game's display names for class and purpose (supplement labels), the ids on hover
+  const sList = P.renderIndex(c, P.route("ships/s")).html;
+  assert.ok(/title="[^"]*heavyfighter">Heavy Fighter</.test(sList) && sList.includes(">Fight</span>"), "class and purpose names");
   ok("list pages");
 
   // loadouts: a fighter gets a combat fit only, a freighter a trader fit too

@@ -59,6 +59,7 @@
     const manifest = { format: FORMAT, version: VERSION, parts: data.parts.length,
       factions: data.factions, faction_short: data.faction_short, calibration: data.calibration,
       calibration_default: data.calibration_default, meta,
+      labels: (data.details && data.details.labels) || { types: {}, purposes: {} },   // display names (ship pages)
       mods: ids.map((id) => ({ id, label: id === CORE ? "SW Interworlds" : mods[id],
         ships: chunks[id].ships.length, parts: chunks[id].parts.length })) };
     return { manifest, chunks, details };
@@ -125,6 +126,7 @@
     }
     return {
       name: "wiki", label: "this site",
+      labels: manifest.labels || { types: {}, purposes: {} },
       mods: Object.fromEntries(manifest.mods.map((m) => [m.id, m.label])),
       sizes: Object.fromEntries(manifest.mods.map((m) => [m.id, { ships: m.ships, parts: m.parts, bytes: m.bytes }])),
       enabledMods,
