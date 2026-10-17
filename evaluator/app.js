@@ -332,6 +332,7 @@
     renderPrice();
     seg($("#price-basis"), [["hull", "Hull price"], ["fitted", "Fitted price"]], st.priceBasis, (v) => { st.priceBasis = v; changed(true); });
     $("#use-save").checked = st.useSave && !!PL; $("#use-save").disabled = !PL;
+    $("#use-save-wrap").hidden = !PL;
     $("#use-save").onchange = (e) => { st.useSave = e.target.checked; changed(true); };
     $("#licensed-btn").disabled = !PL;
     renderFactions(); renderWeights(); renderFocus(); renderProfileState();
@@ -484,8 +485,7 @@
     $("#savefile-current").textContent = PL ? `In use: ${PL.save.file} — ${PL.save.player || "?"}, ${String(PL.save.modified || "").replace("T", " ")}${PL.save.loaded === "browser" ? " (loaded in this browser)" : " (imported by the local server)"}` +
       (edited ? ` · ${edited} faction${edited === 1 ? "" : "s"} adjusted by hand` : "") : "No save loaded.";
     $("#savefile-forget").hidden = !(PL && PL.save.loaded === "browser");
-    $("#savefile-adjust").disabled = !PL;
-    $("#savefile-adjust").title = PL ? "" : "Load a save first";
+    $("#savefile-adjust").hidden = !PL;
   }
   // Reading a save: a bar with percent, MB read and time, from the compressed bytes consumed.
   async function loadSaveFile(file) {
@@ -619,7 +619,9 @@
       st.saveEdits.factions = {};
       applySaveEdits(st.saveEdits); renderSaveData(); renderSaveFile(); changed(true);
     };
-    $("#data-export").onclick = () => runAction("/__export", { all: $("#export-all").checked }, "Re-export");
+    // Server-only controls: the published site cuts their section from the page, so they may be absent.
+    const exportBtn = $("#data-export");
+    if (exportBtn) exportBtn.onclick = () => runAction("/__export", { all: $("#export-all").checked }, "Re-export");
     $("#pins-clear").onclick = () => { st.pins = {}; changed(); $("#job-status").textContent = "Pinned parts cleared."; };
     $("#all-reset").onclick = () => {
       if (!confirm("Reset every setting (factions, filters, pins, active profile) to defaults? Your saved rating profiles are kept.")) return;
