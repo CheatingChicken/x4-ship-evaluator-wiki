@@ -21,9 +21,13 @@ const ok = (msg) => { n++; console.log("ok  " + msg); };
 // ---- routing (no data needed)
 assert.deepStrictEqual(P.route("ships/s/ewing"), { kind: "ship", mod: "swi", hull: "s", key: "ewing" });
 assert.deepStrictEqual(P.route("/submods/dabc/ships/xxl/dabc_eclipse/"), { kind: "ship", mod: "dabc", hull: "xxl", key: "dabc_eclipse" });
-assert.deepStrictEqual(P.route("ships"), { kind: "index", mod: "swi", hull: null });
-assert.deepStrictEqual(P.route("submods/rsp/ships/m"), { kind: "index", mod: "rsp", hull: "m" });
-for (const bad of ["", "equipment/engines", "ships/q/ewing", "ships/s/ewing/extra", "submods", "submods/dabc"])
+assert.deepStrictEqual(P.route("en/ships/s/ewing"), { kind: "ship", mod: "swi", hull: "s", key: "ewing" });
+assert.deepStrictEqual(P.route("ships"), { kind: "index", mod: "swi", list: "hub" });
+assert.deepStrictEqual(P.route("/en/ships/"), { kind: "index", mod: "swi", list: "hub" });
+assert.deepStrictEqual(P.route("ships/full-list"), { kind: "index", mod: "swi", list: "full" });
+assert.deepStrictEqual(P.route("submods/rsp/ships/m"), { kind: "index", mod: "rsp", list: "hull", hull: "m" });
+assert.deepStrictEqual(P.route("ships/imp"), { kind: "index", mod: "swi", list: "faction", code: "imp" });
+for (const bad of ["", "equipment/engines", "ships/q/ewing", "ships/s/ewing/extra", "submods", "submods/dabc", "ships/a.b"])
   assert.strictEqual(P.route(bad).kind, "none", bad);
 ok("routes");
 
@@ -63,10 +67,21 @@ ok("routes");
   assert.ok(P.renderShip(c, eclipse).includes('class="modchip" title="Dreadnaughts'), "DABC chip");
   ok("mod chips");
 
-  // ships list
-  const index = P.renderIndex(c, P.route("submods/rsp/ships"));
-  assert.strictEqual((index.match(/<tr>/g) || []).length - 1, D.ships.filter((s) => s.origin === "rsp").length, "RSP list");
-  ok("ships list");
+  // list pages
+  const rows = (page) => (page.html.match(/<tr>/g) || []).length - (page.html.match(/<thead>/g) || []).length;
+  assert.strictEqual(rows(P.renderIndex(c, P.route("submods/rsp/ships/full-list"))), D.ships.filter((s) => s.origin === "rsp").length, "RSP full list");
+  assert.strictEqual(rows(P.renderIndex(c, P.route("ships/full-list"))), D.ships.length, "full list: every loaded ship");
+  assert.ok(P.renderIndex(c, P.route("ships/xl")).html.includes("Imperial Star Destroyer II"), "XL list");
+  const hub = P.renderIndex(c, P.route("ships")).html;
+  for (const want of ["Vessel Catalogue", "./ships/full-list", "./ships/xxl", "./ships/imp", "./submods/dabc/ships"]) assert.ok(hub.includes(want), "hub links " + want);
+  assert.strictEqual(P.renderIndex(c, P.route("ships/nosuchfaction")), null, "unknown faction");
+  // Faction lists match the wiki's own (swi-api /ships/<hull>/list/filter/<code>, recorded
+  // 2026-10-17): the ships the faction sells, base SWI only.
+  const swiOnly = Object.assign({}, c, { D: S.merge(manifest, [chunks.swi]) });
+  const wikiImp = 41, wikiHap = 17;
+  assert.strictEqual(rows(P.renderIndex(swiOnly, P.route("ships/imp"))), wikiImp, "Galactic Empire list");
+  assert.strictEqual(rows(P.renderIndex(swiOnly, P.route("ships/hap"))), wikiHap, "Hapes list");
+  ok("list pages");
 
   // loadouts: a fighter gets a combat fit only, a freighter a trader fit too
   const lo = P.loadouts(D, ewing, O);

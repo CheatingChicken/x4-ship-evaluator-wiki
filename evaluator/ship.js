@@ -3,10 +3,16 @@
  * thruster, shield, weapon and turret that fits the hull, with prices, sellers and build costs.
  * A proof of concept for the wiki maintainers.
  *
- * Routing: like the wiki, one page renders whatever ship the address names. GitHub Pages answers
- * every path it has no file for with 404.html, which is this page (tools/build_site.js), so
- * /ships/s/ewing renders the E-wing live. Also /ships, /ships/<hull> and /submods/<mod>/ships
- * list the ships.
+ * Routing: like the wiki, one page renders whatever the address names. GitHub Pages answers every
+ * path it has no file for with 404.html, which is this page (tools/build_site.js), so
+ * /ships/s/ewing renders the E-wing live. The wiki's list pages work the same way:
+ *   ships                     the catalogue: full list, by hull, by faction, submods
+ *   ships/full-list           every ship, grouped by size
+ *   ships/<hull>              one size
+ *   ships/<faction>           the ships a faction sells, by its in-game short name (imp, nrl, ...),
+ *                             as the wiki's swi-api /list/filter/<code> does (checked: same lists)
+ *   submods/<mod>/ships[...]  the same for one submod's ships
+ * The wiki's locale prefix (/en/...) is accepted too.
  *
  * Data: data.js (site_loader.js) for SWI plus the mods switched on (the same choice as the
  * evaluator's Settings -> Mods; the page's own mod is always loaded), and the per-mod details files.
@@ -41,8 +47,10 @@
       evaluatorLink: true,   // "Open in the evaluator"
       wikiLink: true,        // the same ship's page on the wiki, for comparison
       modToggles: true,      // switch submods' equipment on and off
+      icons: true,           // ship class icons in the lists, from the wiki's own /ships/icons/
     },
     wiki: "https://swi.siifr.net",
+    icons: "https://swi.siifr.net/ships/icons/",
     // Names for build-cost wares. Energy cells, hull parts, ship supplies and rhydonium as the wiki
     // shows them; the rest are the base game's names (SWI may name some differently).
     wareNames: {
@@ -66,16 +74,24 @@
   const cr = (v) => (v ? num(Math.round(v), 0) + " cr" : "—");
   const pathOf = (mod, hull, key) => (mod === "swi" ? "" : `submods/${mod}/`) + "ships" + (hull ? "/" + hull : "") + (key ? "/" + key : "");
 
-  // path below the site root -> { kind: "ship", mod, hull, key } | { kind: "index", mod, hull } | { kind: "none" }
+  /* path below the site root ->
+   *   { kind: "ship", mod, hull, key }
+   *   { kind: "index", mod, list: "hub" | "full" | "hull" | "faction", hull?, code? }
+   *   { kind: "none" } */
   function route(path) {
     const p = String(path || "").split(/[?#]/)[0].split("/").filter(Boolean).map((x) => { try { return decodeURIComponent(x); } catch (e) { return x; } });
+    if (p[0] === "en") p.shift();                          // the wiki's locale prefix
     let mod = "swi", i = 0;
     if (p[0] === "submods") { mod = p[1]; i = 2; if (!mod) return { kind: "none" }; }
     if (p[i] !== "ships" || p.length > i + 3) return { kind: "none" };
-    const hull = p[i + 1] || null, key = p[i + 2] || null;
-    if (hull && !HULLS.includes(hull)) return { kind: "none" };
-    return key ? { kind: "ship", mod, hull, key } : { kind: "index", mod, hull };
+    const second = p[i + 1] ? p[i + 1].toLowerCase() : null, key = p[i + 2] || null;
+    if (key) return HULLS.includes(second) ? { kind: "ship", mod, hull: second, key } : { kind: "none" };
+    if (!second) return { kind: "index", mod, list: "hub" };
+    if (second === "full-list") return { kind: "index", mod, list: "full" };
+    if (HULLS.includes(second)) return { kind: "index", mod, list: "hull", hull: second };
+    return /^[a-z0-9_]+$/.test(second) ? { kind: "index", mod, list: "faction", code: second } : { kind: "none" };
   }
+  const listPath = (mod, rest) => (mod === "swi" ? "" : `submods/${mod}/`) + "ships" + (rest ? "/" + rest : "");
   const shipPath = (ship, det) => { const pg = (det.ships[ship.id] || {}).page || {}; return pathOf(ship.origin, pg.hull, pg.key); };
   function findShip(D, det, r) {
     return D.ships.find((s) => { const pg = (det.ships[s.id] || {}).page; return pg && s.origin === r.mod && pg.hull === r.hull && pg.key === r.key; }) || null;
@@ -281,21 +297,74 @@
       <div class="shipgrid${on.infobox ? "" : " noinfo"}"><div class="shipmain">${main}</div>${on.infobox ? infobox(c, s, d, h) : ""}</div>`;
   }
 
-  // The ships list: /ships every loaded ship, /submods/<mod>/ships one mod's; /<hull> narrows to one size.
-  function renderIndex(c, r) {
-    const h = ctxHelpers(c);
-    const ships = c.D.ships.filter((s) => (r.mod === "swi" || s.origin === r.mod)
-      && (!r.hull || ((c.det.ships[s.id] || {}).page || {}).hull === r.hull))
-      .sort((a, b) => HULLS.indexOf(((c.det.ships[a.id] || {}).page || {}).hull) - HULLS.indexOf(((c.det.ships[b.id] || {}).page || {}).hull) || a.name.localeCompare(b.name));
-    const title = (r.mod !== "swi" ? (c.mods[r.mod] || r.mod) + " ships" : "Ships") + (r.hull ? " · " + r.hull.toUpperCase() : "");
-    const sizes = HULLS.map((z) => `<a href="./${pathOf(r.mod, z)}"${r.hull === z ? ` class="on"` : ""}>${z.toUpperCase()}</a>`).join("");
-    return `<nav class="crumbs"><a href="./ships">Ships</a>${r.mod !== "swi" ? ` › ${esc(c.mods[r.mod] || r.mod)}` : ""}</nav>
-      <header class="shiphead"><h1>${esc(title)}</h1><p class="sizes">${sizes}</p></header>` + table([
-      ["Ship", (s) => `<a href="./${shipPath(s, c.det)}">${esc(s.name)}</a>${h.modChip(s.origin)}`, { txt: true }],
-      ["Size", (s) => esc(s.size.toUpperCase())], ["Class", (s) => esc(s.type || "—"), { txt: true }], ["Purpose", (s) => esc(s.purpose || "—"), { txt: true }],
+  // ---------------------------------------------------------------- list pages
+  const hullOf = (c, s) => ((c.det.ships[s.id] || {}).page || {}).hull || s.size;
+  // The faction a list code names: its in-game short name (imp), or its id (galempire).
+  function factionOf(c, code) {
+    const short = c.D.faction_short || {};
+    return Object.keys(c.D.factions).find((f) => (short[f] || "").toLowerCase() === code) || (code in c.D.factions ? code : null);
+  }
+  const factionCode = (c, f) => ((c.D.faction_short || {})[f] || f).toLowerCase();
+  function shipTable(c, ships, h) {
+    const icon = (s) => {
+      const i = (c.det.ships[s.id] || {}).icon;
+      return c.cfg.sections.icons && i ? `<img class="shipicon" src="${esc(c.cfg.icons + i + ".png")}" alt="" loading="lazy" onerror="this.remove()">` : "";
+    };
+    return table([
+      ["Ship", (s) => `${icon(s)}<a href="./${shipPath(s, c.det)}">${esc(s.name)}</a>${h.modChip(s.origin)}`, { txt: true, name: true }],
+      ["Class", (s) => esc(s.type || "—"), { txt: true }], ["Purpose", (s) => esc(s.purpose || "—"), { txt: true }],
       ["Hull", (s) => num(s.hull, 0)], ["Cargo", (s) => num(Math.max(0, ...Object.values(s.cargo || {})), 0)],
+      ["Hangar", (s) => num(((s.hangar || {}).dock_s || 0) + ((s.hangar || {}).dock_m || 0), 0)],
       ["Price", (s) => cr(s.price)], ["Sold by", (s) => h.sellers(s.owners), { txt: true }],
     ], ships, "index");
+  }
+  // ships grouped by size: a heading and a table per size (the wiki's full list layout)
+  const bySize = (c, ships, h) => HULLS.map((z) => {
+    const list = ships.filter((s) => hullOf(c, s) === z);
+    return list.length ? `<h2 id="${z}">${z.toUpperCase()} <span class="muted">${list.length}</span></h2>` + shipTable(c, list, h) : "";
+  }).join("");
+  const linkList = (items) => `<ul class="linklist">${items.map(([href, label, n]) =>
+    `<li><a href="./${href}">${label}</a> <span class="muted small">${n}</span></li>`).join("")}</ul>`;
+
+  /* The list pages. Returns { title, html }, or null when the address names no faction that sells
+   * ships. /ships lists every loaded ship (SWI plus the mods switched on); /submods/<mod>/ships that mod's. */
+  function renderIndex(c, r) {
+    const h = ctxHelpers(c), modName = r.mod !== "swi" ? (c.mods[r.mod] || r.mod) : null;
+    const pool = c.D.ships.filter((s) => r.mod === "swi" || s.origin === r.mod)
+      .sort((a, b) => HULLS.indexOf(hullOf(c, a)) - HULLS.indexOf(hullOf(c, b)) || a.name.localeCompare(b.name));
+    const crumbs = (here) => `<nav class="crumbs"><a href="./ships">Ships</a>` +
+      (modName ? ` › <a href="./${listPath(r.mod)}">${esc(modName)}</a>` : "") + (here ? " › " + esc(here) : "") + `</nav>`;
+    const wiki = (rest) => (c.cfg.sections.wikiLink ? `<p class="links"><a class="button" href="${esc(c.cfg.wiki + "/" + listPath(r.mod, rest))}" ` +
+      `target="_blank" rel="noopener">This list on the wiki ↗</a></p>` : "");
+    const head = (title, rest, note) => `<header class="shiphead"><h1>${esc(title)}</h1>${note ? `<p class="muted">${esc(note)}</p>` : ""}${wiki(rest)}</header>`;
+    const prefix = modName ? modName + " ships" : "Ships";
+    if (r.list === "hub") {
+      const hulls = HULLS.map((z) => [listPath(r.mod, z), z.toUpperCase() + " ships", pool.filter((s) => hullOf(c, s) === z).length]).filter((x) => x[2]);
+      let html = crumbs() + head(modName ? prefix : "Vessel Catalogue", "", modName ? "" : "Where the ships of your dreams in the SWI galaxy can be found") +
+        `<section><h2>Ship lists</h2>${linkList([[listPath(r.mod, "full-list"), "Full list", pool.length]])}</section>` +
+        `<section><h2>Ships by hull</h2>${linkList(hulls)}</section>`;
+      if (r.mod === "swi") {
+        const sellers = Object.keys(c.D.factions).map((f) => [f, pool.filter((s) => s.owners.includes(f)).length]).filter(([, n]) => n)
+          .sort((a, b) => (c.D.factions[a[0]] || a[0]).localeCompare(c.D.factions[b[0]] || b[0]));
+        const mods = Object.keys(c.mods).filter((m) => m !== "swi").map((m) => {
+          const n = c.D.ships.filter((s) => s.origin === m).length;
+          return [listPath(m), esc(c.mods[m]), n || "not switched on"];
+        });
+        html += `<section><h2>Ships by faction</h2>${linkList(sellers.map(([f, n]) => [listPath("swi", factionCode(c, f)), esc(c.D.factions[f] || f), n]))}</section>` +
+          `<section><h2>Submods</h2>${linkList(mods)}</section>`;
+      }
+      return { title: modName ? prefix : "Vessel Catalogue", html };
+    }
+    if (r.list === "full") return { title: prefix + " – full list", html: crumbs("Full list") + head(prefix + " – full list", "full-list") + bySize(c, pool, h) };
+    if (r.list === "hull") {
+      const sizes = `<p class="sizes">${HULLS.map((z) => `<a href="./${listPath(r.mod, z)}"${r.hull === z ? ` class="on"` : ""}>${z.toUpperCase()}</a>`).join("")}</p>`;
+      const title = `${modName ? modName + " " : ""}${r.hull.toUpperCase()} ships`;
+      return { title, html: crumbs(r.hull.toUpperCase()) + head(title, r.hull) + sizes + shipTable(c, pool.filter((s) => hullOf(c, s) === r.hull), h) };
+    }
+    const f = factionOf(c, r.code);
+    if (!f) return null;
+    const title = `${prefix} – ${c.D.factions[f] || f}`;
+    return { title, html: crumbs(c.D.factions[f] || f) + head(title, r.code, "Every ship this faction sells.") + bySize(c, pool.filter((s) => s.owners.includes(f)), h) };
   }
 
   // ---------------------------------------------------------------- browser
@@ -326,8 +395,10 @@
         ? `<label><input type="checkbox" checked disabled> ${esc(label)}</label>`
         : `<label title="Same choice as the evaluator's Settings → Mods"><input type="checkbox" data-mod="${esc(id)}"${mods.includes(id) ? " checked" : ""}${id === r.mod ? " disabled" : ""}> ${esc(label)}</label>`).join(" ")}</p>` : "";
       if (r.kind === "index") {
-        document.title = "Ships · X4 Ship Evaluator";
-        out.innerHTML = renderIndex(c, r) + toggles;
+        const page = renderIndex(c, r);
+        if (!page) return notFound(`No faction "${r.code}" sells ships here.`);
+        document.title = page.title + " · X4 Ship Evaluator";
+        out.innerHTML = page.html + toggles;
       } else {
         const s = findShip(D, det, r);
         if (!s) return notFound(`No ship "${r.key}" among the ${r.hull.toUpperCase()} ships${r.mod !== "swi" ? " of " + (src.mods[r.mod] || r.mod) : ""}.`);

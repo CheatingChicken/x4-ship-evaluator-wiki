@@ -59,3 +59,9 @@ a.button:hover { border-color: var(--accent); text-decoration: none; }
 .loadout .facts b { color: var(--muted); font-weight: 600; margin-right: 3px; }
 .more-chip { font-size: 11px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; cursor: help; }
 .shippage td code { font-size: 11px; background: var(--panel-2); padding: 0 4px; border-radius: 3px; }
+
+/* list pages */
+.linklist { list-style: none; padding: 0; margin: 0 0 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; }
+.linklist li { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent-dim); border-radius: 4px; padding: 8px 12px; }
+.shipicon { height: 16px; width: auto; vertical-align: middle; margin-right: 6px; }
+.shippage h2 .muted { font-weight: 400; }

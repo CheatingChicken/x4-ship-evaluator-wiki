@@ -220,7 +220,7 @@
   }
   function shipDetail(s) {
     const v = (key) => (isNum(s.props[key]) ? s.props[key] : null);
-    return compact({ page: { hull: s.hull, key: s.key }, description: longText(s.description), price: priceOf(s.w), build: s.w.build,
+    return compact({ page: { hull: s.hull, key: s.key }, icon: s.icon, description: longText(s.description), price: priceOf(s.w), build: s.w.build,
       groupTags: s.groups.map((g) => g.tags),                         // in the order of the ship's groups
       deployables: v("storage.deployable"), countermeasures: v("storage.countermeasure"), radar: v("radar.range"),
       supply: v("threatscore.value") });
@@ -398,7 +398,8 @@
         purpose: (props.purpose && props.purpose._primary) || null, type: (props.ship && props.ship._type) || null,
         race: ident._makerrace || null, name, variation: cleanText(ident._variation),
         thrusterTags: new Set(String((props.thruster && props.thruster._tags) || "").split(/\s+/).filter(Boolean)),
-        slots, cargo, hangar, unknownStorage, w: wareRecord(j.ware), key, description: j.description };
+        slots, cargo, hangar, unknownStorage, w: wareRecord(j.ware), key, description: j.description,
+        icon: entry && entry._icon ? String(entry._icon).toLowerCase() : null };
     }
 
     // Fits (catalogue._fits): a part fits a slot when every attach tag but `component` is on it.
