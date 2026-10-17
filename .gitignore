@@ -14,3 +14,6 @@ __pycache__/
 *.tmp
 .vscode/
 .idea/
+
+# The data gaps report is kept out of the repo (shared privately); a local copy may sit here.
+docs/wiki-gaps.html

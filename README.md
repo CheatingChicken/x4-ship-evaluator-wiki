@@ -16,7 +16,6 @@ wiki. Nothing to install: plain JavaScript, no dependencies, no build step.
 | Ship pages | `evaluator/ship.html`, `ship.js`, `ship.css` | Proof of concept for the wiki maintainers: the wiki's `/ships/<hull>/<ship>` pages rebuilt from our data, with every engine, thruster, shield, weapon and turret that fits, prices, sellers, build costs, the slot layout and the evaluator's best loadouts. Published as `404.html`, which GitHub Pages serves for every path without a file, so `/ships/s/ewing` renders live from the address, as on the wiki. The wiki's list pages too: `/ships` (catalogue), `/ships/full-list`, `/ships/<hull>`, `/ships/<faction short name>` (e.g. `imp`) and the same under `/submods/<mod>/ships`; `/en/...` works as well. Every table sorts by a click on its header; the lists have a search box (kept in `?q=`). Every section has a switch (`CONFIG.sections`, or `window.X4ShipConfig`). |
 | Save reader | browser-side, shared | Reads a save file in the browser (it never leaves the player's computer) for licences, reputation, shipyards and blueprints. |
 | Supplement | `supplement/supplement.json` | What the wiki does not serve yet (thrusters, cargo and hangar sizes, part wares, factions). Generated from a local game install by the local repo (`x4catalogue.py --supplement`). |
-| Gap report | `docs/wiki-gaps.html` | What the wiki backend lacks and where it lives in the mod files. |
 
 Supported mods: SW Interworlds (always), DABC and RSP (off by default). The list is an allowlist
 (`MODS` in `evaluator/wiki.js`); no other source is read.
