@@ -27,7 +27,9 @@
   "use strict";
 
   // ---------------------------------------------------------------- configuration
-  const MODS = { dabc: "DABC", rsp: "RSP" };          // optional submods; SWI is always on
+  // Optional submods, in load order; SWI is always on. Adding one: an entry here plus its supplement
+  // data (x4cat/supplement.py ALLOWED); the site build then publishes it as its own data file.
+  const MODS = { dabc: "Dreadnaughts and Battlecruisers (DABC)", rsp: "Reaper's Ship Pack (RSP)" };
   const CONFIG = {
     api: "https://swi-api.siifr.net",
     wiki: "https://swi.siifr.net",
@@ -202,8 +204,9 @@
   }
 
   // ---------------------------------------------------------------- build
-  /* build({ fetchJson, mods, supplement, config, onProgress }) -> X4DATA
-   *   fetchJson(url) -> parsed JSON or null (404). mods: subset of Object.keys(MODS). */
+  /* build({ fetchJson, mods, supplement, config, onProgress, origins }) -> X4DATA
+   *   fetchJson(url) -> parsed JSON or null (404). mods: subset of Object.keys(MODS).
+   *   origins: also record which source each part and mining fit comes from (see assemble). */
   async function build(opts) {
     const cfg = Object.assign({}, CONFIG, opts.config || {});
     const mods = (opts.mods || Object.keys(MODS)).filter((m) => m in MODS);   // allowlist
@@ -240,11 +243,14 @@
     const partFiles = (await Promise.all(partJobs)).filter(Boolean);
     progress.phase = "building";
     tell();
-    return assemble({ sup, wares: arr(wares), shipFiles, partFiles, sources, mods });
+    return assemble({ sup, wares: arr(wares), shipFiles, partFiles, sources, mods, origins: !!opts.origins });
   }
 
   // ---------------------------------------------------------------- assembly (pure)
-  function assemble({ sup, wares, shipFiles, partFiles, sources, mods }) {
+  /* origins: for splitting the result per mod (site_loader.js). Parts then carry `origin` (the
+   * source that defines them; "base" for thrusters) and each slot group carries `mining` from its
+   * slot tags alone plus `miningFrom`, the sources of the mining parts that fit it. */
+  function assemble({ sup, wares, shipFiles, partFiles, sources, mods, origins }) {
     CAL = Object.assign({}, (sup.calibration && sup.calibration.constants) || {});
     const waresByMacro = {};
     for (const w of wares) {
@@ -253,12 +259,13 @@
     }
 
     // Parts: later sources override earlier ones (SWI, then the enabled submods), like a load order.
-    const equipment = {};
+    const equipment = {}, overridden = new Set();
     for (const { src, entry, j } of partFiles) {
       const m = j.macro || {};
       const id = String(m._name || "").toLowerCase();
       const kind = CLASS_KIND[m._class];
       if (!id || !kind) continue;
+      if (equipment[id] && equipment[id].origin !== src.id) overridden.add(id);
       const attach = new Set(arr(j.connection && j.connection._tags).map(String));
       const props = m.properties || {};
       const flat = flatten(props, "");
@@ -295,6 +302,7 @@
       const id = String(m._name || "").toLowerCase();
       const cls = String(m._class || "");
       if (!id || !cls.startsWith("ship_")) continue;
+      if (ships[id] && ships[id].src !== src.id) overridden.add(id);
       const props = m.properties || {};
       const flat = flatten(props, "");
       const ident = props.identification || {};
@@ -371,7 +379,9 @@
         const tags = new Set(g.tags);
         const cands = SLOT_ACCEPTS[g.kind].flatMap((k2) => byKind[k2] || []);
         g.fits = cands.filter((n) => fits(n, tags) && raceOk(n, s)).sort();
-        g.mining = g.mining || g.fits.some((n) => equipment[n].mining);
+        g.slotMining = g.mining;
+        g.miningFrom = [...new Set(g.fits.filter((n) => equipment[n].mining).map((n) => equipment[n].origin))].sort();
+        g.mining = g.mining || g.miningFrom.length > 0;
       }
       s.thrusters = s.thrusterTags.size ? (byKind.thruster || []).filter((n) => fits(n, s.thrusterTags) && raceOk(n, s)).sort() : [];
       s.groups = [...groups.values()].sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0)
@@ -392,13 +402,15 @@
       parts.push({ id: e.id, ware: e.w.ware, name: e.name, kind: e.kind, size: e.size, race: e.race, mk: e.mk, mining: e.mining,
         price: e.w.price || 0, owners: e.w.owners, licence: e.w.licence, blueprintable: e.w.blueprintable, src, use: partUse(e, stats),
         stats: round3(Object.fromEntries(Object.entries(stats).filter(([s2]) => PART_STATS.includes(s2)))) });
+      if (origins) parts[parts.length - 1].origin = e.origin;
     }
     const outShips = [], notes = { unknownStorage: new Set(), noWare: [] };
     for (const s of Object.values(ships).sort((a, b) => (a.id < b.id ? -1 : 1))) {
       if (!s.w || !s.w.ware) { notes.noWare.push(s.id); continue; }
       s.unknownStorage.forEach((r) => notes.unknownStorage.add(r));
-      const groups = s.groups.map((g) => ({ kind: g.kind, size: g.size, count: g.count, mining: g.mining,
-        cands: [...new Set(g.fits.filter((n) => n in index).map((n) => index[n]))].sort((a, b) => a - b) }));
+      const groups = s.groups.map((g) => Object.assign({ kind: g.kind, size: g.size, count: g.count, mining: origins ? g.slotMining : g.mining,
+        cands: [...new Set(g.fits.filter((n) => n in index).map((n) => index[n]))].sort((a, b) => a - b) },
+        origins ? { miningFrom: g.miningFrom } : {}));
       const engGroups = s.groups.filter((g) => g.kind === "engine");
       const engines = [...new Set(engGroups.flatMap((g) => g.fits.filter((n) => n in index).map((n) => index[n])))].sort((a, b) => a - b);
       const thrusters = [...new Set(s.thrusters.filter((n) => n in index).map((n) => index[n]))].sort((a, b) => a - b);
@@ -436,7 +448,8 @@
       calibration_default: { probe: cal.probe || null, game_version: cal.game_version || null },
       meta: { generated: new Date().toISOString(), source: "wiki", game_version: cal.game_version ? String(cal.game_version) : null,
         mods: ["swi"].concat(mods), load_order: sources.map((s2) => ({ id: s2.id, name: s2.label, version: "" })),
-        supplement: sup.generated || null, notes: { unknown_storage: [...notes.unknownStorage].sort(), ships_without_ware: notes.noWare } },
+        supplement: sup.generated || null, notes: { unknown_storage: [...notes.unknownStorage].sort(), ships_without_ware: notes.noWare,
+          defined_twice: [...overridden].sort() } },
     };
   }
 
@@ -465,7 +478,7 @@
       const list = q != null ? q.split(",") : JSON.parse(localStorage.getItem("x4wiki.mods") || "null");
       if (Array.isArray(list)) return list.filter((m) => m in MODS);
     } catch (e) { /* storage blocked */ }
-    return Object.keys(MODS);
+    return [];                                        // default: SWI alone
   }
   function source() {
     return {

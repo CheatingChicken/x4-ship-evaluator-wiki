@@ -6,8 +6,8 @@
 const fs = require("fs");
 const path = require("path");
 const W = require("../evaluator/wiki.js");
+const { FIX, fixtureFetch } = require("../tools/fixtures.js");
 
-const FIX = path.join(__dirname, "fixtures", "wiki");
 const LOCAL = process.env.X4EVAL_LOCAL || "G:/SteamLibrary/steamapps/common/X4 Foundations/extensions/_x4catalogue";
 const SUPPLEMENT = [path.join(__dirname, "..", "supplement", "supplement.json"), path.join(LOCAL, "out", "supplement.json")].find((p) => fs.existsSync(p));
 const verbose = process.argv.includes("--verbose");
@@ -15,20 +15,6 @@ const verbose = process.argv.includes("--verbose");
 if (!fs.existsSync(FIX) || !SUPPLEMENT || !fs.existsSync(path.join(LOCAL, "evaluator", "data.js"))) {
   console.log("skipped: needs tests/fixtures/wiki (node tools/record_wiki.js), a supplement.json and the local data.js");
   process.exit(0);
-}
-
-// URL -> recorded file (the layout tools/record_wiki.js writes)
-function fixtureFetch(url) {
-  const u = new URL(url);
-  let rel;
-  if (u.host === "swi-api.siifr.net") {
-    const m = /^\/ships\/([a-z]+)\/(?:list\/full|(.+))$/.exec(decodeURIComponent(u.pathname));
-    if (u.pathname === "/wares") rel = "api/wares.json";
-    else if (m && !m[2]) rel = `api/ships/${m[1]}.json`;
-    else if (m) rel = `api/ships/${m[1]}/${m[2]}.json`;
-  } else rel = decodeURIComponent(u.pathname).replace(/^\//, "");
-  const file = rel && path.join(FIX, rel);
-  return Promise.resolve(file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf-8")) : null);
 }
 
 function loadLocal() {

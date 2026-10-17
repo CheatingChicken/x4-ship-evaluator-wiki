@@ -14,7 +14,7 @@
       if (!window.X4DATA && window.X4Source) {
         const box = document.createElement("div");
         box.id = "boot";
-        box.innerHTML = `<div class="boot-card"><b>Loading ship data from ${window.X4Source.name === "wiki" ? "the SWI wiki" : "the data source"}…</b>
+        box.innerHTML = `<div class="boot-card"><b>Loading ship data from ${window.X4Source.label || (window.X4Source.name === "wiki" ? "the SWI wiki" : "the data source")}…</b>
           <div class="boot-bar"><span></span></div><p class="small muted" id="boot-line">Starting…</p></div>`;
         document.body.appendChild(box);
         const bar = box.querySelector(".boot-bar span"), line = box.querySelector("#boot-line");
@@ -575,14 +575,17 @@
     renderSaveFile();
     changed(true);
   }
+  // Mods (data from a source such as the wiki or the published site): SWI always, submods by choice.
+  // The data is loaded at start, so a change reloads the page.
   function renderWikiMods() {
     const sec = $("#wikimods"), src = window.X4Source;
     if (!src || (D.meta || {}).source !== "wiki") { sec.hidden = true; return; }
     sec.hidden = false;
-    const on = src.enabledMods();
+    const on = src.enabledMods(), sizes = src.sizes || {};
+    const what = (id) => { const z = sizes[id]; return z ? ` <span class="muted small">${z.ships} ships, ${z.parts} parts${z.bytes ? ", " + Math.round(z.bytes / 1024) + " KB" : ""}</span>` : ""; };
     $("#wikimods-list").innerHTML = Object.entries(src.mods).map(([id, label]) => id === "swi"
-      ? `<label class="check"><input type="checkbox" checked disabled> ${esc(label)} <span class="muted small">(always)</span></label>`
-      : `<label class="check"><input type="checkbox" data-mod="${esc(id)}" ${on.includes(id) ? "checked" : ""}> ${esc(label)}</label>`).join("");
+      ? `<label class="check"><input type="checkbox" checked disabled> ${esc(label)} <span class="muted small">(always)</span>${what(id)}</label>`
+      : `<label class="check"><input type="checkbox" data-mod="${esc(id)}" ${on.includes(id) ? "checked" : ""}> ${esc(label)}${what(id)}</label>`).join("");
   }
 
   function wireSettings() {
@@ -596,9 +599,9 @@
     $("#wikimods-list").onchange = (e) => {
       const list = [...document.querySelectorAll("#wikimods-list input[data-mod]:checked")].map((x) => x.dataset.mod);
       window.X4Source.setMods(list);
-      $("#wikimods-msg").textContent = "Reload the page to load the data for this selection.";
+      $("#wikimods-msg").textContent = "Loading the data for this selection…";
+      location.reload();
     };
-    $("#wikimods-reload").onclick = () => location.reload();
     $("#opt-ids").onchange = (e) => { st.display.showIds = e.target.checked; applyDisplay(); save(); };
     $("#opt-short").onchange = (e) => { st.display.shortFactions = e.target.checked; save(); if (last) { renderTable(); renderDetail(); } };
     $("#opt-vanilla").onchange = (e) => {
