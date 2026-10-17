@@ -29,7 +29,14 @@ node tests/test_optimiser.js
 node tests/test_profile.js
 ```
 
-The dev server serves `evaluator/` on port 8766, next to the local edition on 8765.
+```
+node tools/record_wiki.js            record the wiki JSON once into tests/fixtures/wiki (gitignored, never published)
+python tools/dev_server.py           the page on http://localhost:8766/ with the recorded data, same origin
+node tests/test_wiki_adapter.js      the adapter's output against the local edition's data.js
+```
+
+The live wiki data is readable only from pages on swi.siifr.net (CORS), so local testing runs on
+the recorded copy. The dev server maps it to the wiki's URL scheme and points `wiki.js` at it.
 
 ## Licence
 

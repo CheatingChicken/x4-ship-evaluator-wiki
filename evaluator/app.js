@@ -1,8 +1,43 @@
 /* Evaluator page: filters, ranking table, loadout editor. All ranking logic is in optimiser.js. */
 (function () {
   "use strict";
-  // First run: no data.js yet. setup.js offers to build it from the player's game.
-  if (!window.X4DATA) { window.X4Setup.firstRun(); return; }
+  /* BOOT. Some inputs arrive asynchronously, so the first run of this script only gathers them and
+   * then runs the script again with them in place:
+   *   - data: data.js (local edition); or, without it, a data source such as the wiki adapter
+   *     (window.X4Source, wiki.js), loaded with a progress display; or else the first-run screen;
+   *   - the player: player.js (imported by serve.py) or a save loaded in the browser (savereader.js,
+   *     kept in IndexedDB), whichever save is newer. */
+  if (!window.__x4ready) {
+    const self = document.currentScript && document.currentScript.src;
+    const runAgain = () => { window.__x4ready = true; const s = document.createElement("script"); s.src = self; document.body.appendChild(s); };
+    (async () => {
+      if (!window.X4DATA && window.X4Source) {
+        const box = document.createElement("div");
+        box.id = "boot";
+        box.innerHTML = `<div class="boot-card"><b>Loading ship data from ${window.X4Source.name === "wiki" ? "the SWI wiki" : "the data source"}…</b>
+          <div class="boot-bar"><span></span></div><p class="small muted" id="boot-line">Starting…</p></div>`;
+        document.body.appendChild(box);
+        const bar = box.querySelector(".boot-bar span"), line = box.querySelector("#boot-line");
+        try {
+          window.X4DATA = await window.X4Source.load((p) => {
+            const pct = p.total ? Math.round((100 * p.done) / p.total) : 0;
+            bar.style.width = pct + "%";
+            line.textContent = `${p.phase}: ${p.done} of ${p.total} files`;
+          });
+          box.remove();
+        } catch (e) {
+          line.className = "small warn";
+          line.textContent = "Could not load the data: " + e.message + ". Reload the page to try again.";
+          return;
+        }
+      }
+      if (!window.X4DATA) { window.X4Setup.firstRun(); return; }
+      const stored = window.X4Save ? await window.X4Save.stored() : null;
+      if (stored && (!window.X4PLAYER || String(stored.save.modified || "") >= String(window.X4PLAYER.save.modified || ""))) window.X4PLAYER = stored;
+      runAgain();
+    })();
+    return;
+  }
   const D = window.X4DATA, PL = window.X4PLAYER, O = window.X4Opt;
   const $ = (s) => document.querySelector(s);
   const STORE = "x4eval.v1";
@@ -134,14 +169,15 @@
   function renderStatus() {
     const b = [];
     const m = D.meta || {};
-    b.push(`<span class="badge">X4 ${m.game_version || "?"} · ${D.ships.length} ships · ${D.parts.length} parts · data ${String(m.generated || "").slice(0, 10)}</span>`);
+    const from = m.source === "wiki" ? "SWI wiki" + ((m.mods || []).length > 1 ? " + " + m.mods.filter((x) => x !== "swi").join(", ").toUpperCase() : "") : "X4 " + (m.game_version || "?");
+    b.push(`<span class="badge">${from} · ${D.ships.length} ships · ${D.parts.length} parts · data ${String(m.generated || "").slice(0, 10)}</span>`);
     const cal = D.calibration;
     const def = D.calibration_default;
     b.push(cal ? `<span class="badge good" title="Movement and weapon figures checked against your own game's statistics">calibrated by in-game probe</span>`
       : def ? `<span class="badge" title="Movement and shields: formulas verified exact against the game (X4 ${def.game_version || "?"} probe of ${String(def.probe || "").slice(0, 10)}). Weapon DPS: a calibrated average. For exact per-part values on your install, run the in-game probe (docs/TECHNICAL.md).">verified formulas</span>`
       : `<span class="badge warn" title="Speeds, turn rates and DPS are formula values. Run the in-game probe (make_probe.py) to calibrate them.">uncalibrated formulas</span>`);
-    b.push(PL ? `<span class="badge" title="${PL.save.file}">save: ${PL.save.player || ""}, ${PL.save.modified ? PL.save.modified.slice(0, 16).replace("T", " ") : ""}</span>`
-      : `<span class="badge warn">no save imported (import_save.py)</span>`);
+    b.push(PL ? `<span class="badge" title="${PL.save.file}${PL.save.loaded === "browser" ? " (loaded in this browser)" : ""}">save: ${PL.save.player || ""}, ${PL.save.modified ? PL.save.modified.slice(0, 16).replace("T", " ") : ""}</span>`
+      : `<span class="badge warn" title="Settings → Save file: load a save so the ranking knows your licences, reputation and blueprints">no save loaded</span>`);
     $("#status").innerHTML = b.join("");
   }
 
@@ -291,6 +327,13 @@
   async function renderSettings() {
     $("#opt-ids").checked = !!st.display.showIds;
     $("#opt-short").checked = !!st.display.shortFactions;
+    renderSaveFile();
+    renderWikiMods();
+    // Data from a source such as the wiki: there is no local server, so its sections and the
+    // "needs the local server" note would only confuse.
+    const hosted = (D.meta || {}).source === "wiki";
+    document.querySelectorAll("#settings .server-only").forEach((x) => (x.hidden = hosted));
+    if (hosted) { $("#no-server").hidden = true; return; }
     let status;
     try { status = await api("/__status"); server = true; } catch (e) { server = false; }
     serverControls().forEach((x) => (x.disabled = !server));
@@ -331,8 +374,54 @@
   }
 
 
+  // ---------------------------------------------------------------- save file (browser) and wiki mods
+  // A save read in the browser (savereader.js): the file never leaves the computer; the result is
+  // kept in IndexedDB and used from the next load on (app.js BOOT), so the page reloads after it.
+  function renderSaveFile() {
+    const sec = $("#savefile");
+    if (!window.X4Save) { sec.hidden = true; return; }
+    $("#savefile-current").textContent = PL ? `In use: ${PL.save.file} — ${PL.save.player || "?"}, ${String(PL.save.modified || "").replace("T", " ")}${PL.save.loaded === "browser" ? " (loaded in this browser)" : " (imported by the local server)"}` : "No save loaded.";
+    $("#savefile-forget").hidden = !(PL && PL.save.loaded === "browser");
+  }
+  async function loadSaveFile(file) {
+    const msg = $("#savefile-msg");
+    if (!file) return;
+    if (!/\.xml(\.gz)?$/i.test(file.name)) { msg.className = "small warn"; msg.textContent = "Pick an X4 save: a .xml.gz (or .xml) file from your save folder."; return; }
+    msg.className = "small";
+    try {
+      const player = await window.X4Save.readFile(file, (p) => { msg.textContent = `Reading ${file.name}: ${Math.round((100 * p.read) / p.total)}%`; });
+      await window.X4Save.store(player);
+      msg.textContent = `Read ${player.save.player || "the save"}: ${Object.keys(player.licences).length} licence types, ${player.blueprints.length} blueprints. Reloading…`;
+      setTimeout(() => location.reload(), 600);
+    } catch (e) {
+      msg.className = "small warn";
+      msg.textContent = "Could not read this save: " + e.message;
+    }
+  }
+  function renderWikiMods() {
+    const sec = $("#wikimods"), src = window.X4Source;
+    if (!src || (D.meta || {}).source !== "wiki") { sec.hidden = true; return; }
+    sec.hidden = false;
+    const on = src.enabledMods();
+    $("#wikimods-list").innerHTML = Object.entries(src.mods).map(([id, label]) => id === "swi"
+      ? `<label class="check"><input type="checkbox" checked disabled> ${esc(label)} <span class="muted small">(always)</span></label>`
+      : `<label class="check"><input type="checkbox" data-mod="${esc(id)}" ${on.includes(id) ? "checked" : ""}> ${esc(label)}</label>`).join("");
+  }
+
   function wireSettings() {
     $("#settings-open").onclick = () => { renderSettings(); $("#settings").showModal(); };
+    $("#savefile-input").onchange = (e) => { loadSaveFile(e.target.files[0]); e.target.value = ""; };
+    const drop = $("#savefile");
+    drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("drag"); };
+    drop.ondragleave = () => drop.classList.remove("drag");
+    drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("drag"); loadSaveFile(e.dataTransfer.files[0]); };
+    $("#savefile-forget").onclick = async () => { await window.X4Save.clear(); location.reload(); };
+    $("#wikimods-list").onchange = (e) => {
+      const list = [...document.querySelectorAll("#wikimods-list input[data-mod]:checked")].map((x) => x.dataset.mod);
+      window.X4Source.setMods(list);
+      $("#wikimods-msg").textContent = "Reload the page to load the data for this selection.";
+    };
+    $("#wikimods-reload").onclick = () => location.reload();
     $("#opt-ids").onchange = (e) => { st.display.showIds = e.target.checked; applyDisplay(); save(); };
     $("#opt-short").onchange = (e) => { st.display.shortFactions = e.target.checked; save(); if (last) { renderTable(); renderDetail(); } };
     $("#save-import").onclick = () => runAction("/__import", { save: $("#save-pick").value }, "Importing " + $("#save-pick").value);

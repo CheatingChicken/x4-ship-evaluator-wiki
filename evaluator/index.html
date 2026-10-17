@@ -157,8 +157,25 @@
     </section>
 
 
+    <section id="savefile">
+      <h2>Save file</h2>
+      <p class="small" id="savefile-current"></p>
+      <div class="row"><label class="filepick"><input type="file" id="savefile-input" accept=".gz,.xml"> Choose a save…</label>
+        <button type="button" id="savefile-forget">Forget it</button></div>
+      <p class="muted small">Pick or drop a save (<code>Documents\Egosoft\X4\&lt;number&gt;\save\*.xml.gz</code>). It is read here in the browser and never uploaded.
+        Licences, reputation, shipyards and your blueprints come from it.</p>
+      <p class="small" id="savefile-msg"></p>
+    </section>
+
+    <section id="wikimods" hidden>
+      <h2>Wiki data</h2>
+      <div id="wikimods-list"></div>
+      <div class="row"><button type="button" id="wikimods-reload">Reload</button></div>
+      <p class="small" id="wikimods-msg"></p>
+    </section>
+
     <section class="server-only">
-      <h2>Save game</h2>
+      <h2>Save game (local server)</h2>
       <p class="small" id="save-current"></p>
       <div class="row"><select id="save-pick"></select><button type="button" id="save-import">Import</button></div>
       <p class="muted small">Licences, reputation, shipyards and your blueprints are read from it. The page reloads when done.</p>
@@ -198,6 +215,9 @@
 <script src="profile.js"></script>
 <script src="setup.js"></script>
 <script src="presets.js"></script>
+<script src="savereader.js"></script>
+<!-- Optional data source: present only in the wiki edition (wiki.js); absent here, which is fine. -->
+<script src="wiki.js" onerror="this.remove()"></script>
 <script src="app.js"></script>
 <script src="livereload.js"></script>
 </body>

@@ -199,3 +199,15 @@ section.firstrun { max-width: 760px; margin: 32px auto; padding: 20px 24px; back
 section.firstrun h2.title { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 10px; }
 section.firstrun pre { background: var(--panel-2); padding: 8px 10px; border-radius: 4px; }
 button.primary { background: var(--accent-dim); border-color: var(--accent); font-weight: 600; }
+
+/* Boot progress (data loaded from a source such as the wiki) */
+#boot { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 50;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.boot-card { width: min(460px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+.boot-bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; margin: 12px 0 6px; }
+.boot-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+/* Save file picker; the section accepts a dropped file */
+#savefile.drag { outline: 2px dashed var(--accent); outline-offset: 4px; }
+.filepick { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-2); cursor: pointer; }
+.filepick input { width: 0; height: 0; opacity: 0; position: absolute; }
+.filepick:focus-within { outline: 2px solid var(--accent); }

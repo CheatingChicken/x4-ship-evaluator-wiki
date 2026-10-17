@@ -29,6 +29,7 @@ RECORD = os.path.join(HERE, "evaluator", "SHARED_FROM")
 SHARED = [
     "evaluator/index.html", "evaluator/style.css", "evaluator/app.js", "evaluator/optimiser.js",
     "evaluator/profile.js", "evaluator/presets.js", "evaluator/setup.js", "evaluator/livereload.js",
+    "evaluator/savereader.js", "tests/test_savereader.js",
     "tests/test_optimiser.js", "tests/test_profile.js", "tests/baseline.js",
 ]
 
