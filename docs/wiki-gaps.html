@@ -113,9 +113,9 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
     <tr>
       <td class="what"><span class="chip gap">Missing</span><br>Cargo capacity and type</td>
       <td>Cargo, trade throughput</td>
-      <td class="src"><code>assets/props/Storage/macros/storage_*_macro.xml</code> in SWI and each submod. The ship JSON only names them (e.g. <code>storage_container_50000_macro</code>); the volume is in the name, the cargo type is not reliably.</td>
+      <td class="src"><code>assets/props/Storage/macros/storage_*_macro.xml</code> in SWI and each submod. The ship JSON only names them (e.g. <code>storage_container_50000_macro</code>). The ship pages work the cargo out of that name (<code>parseShipStorage</code>). Checked against the game's own storage macros, that gives the right cargo for 299 of 305 ships and the wrong cargo for 6 (table below).</td>
       <td><code>properties/cargo @max @tags</code> (container, solid, liquid, condensate)</td>
-      <td class="fix">Copy <code>Storage/macros</code> into the organised layout (e.g. <code>wares/storage/</code>) and either resolve the storage connections in the ship JSON or publish a <code>storage.json</code> dictionary.</td>
+      <td class="fix">Copy <code>Storage/macros</code> into the organised layout (e.g. <code>wares/storage/</code>) and either resolve the storage connections in the ship JSON or publish a <code>storage.json</code> dictionary. That also removes the need for the hand-made exception.</td>
     </tr>
     <tr>
       <td class="what"><span class="chip gap">Missing</span><br>Hangar and dock capacity</td>
@@ -141,6 +141,23 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
   </tbody>
 </table>
 </div>
+
+<h3>Cargo read from storage names: the 6 ships it gets wrong</h3>
+<p class="prose">The page script turns every <code>container_5000</code> storage into 10,000 universal cargo (the "Gozanti C-ROC Raider fix"). Five ships really do have 5,000 container cargo and now show the wrong value. The Raider itself still shows the wrong value, because its storage's name doesn't match the size of its real storage.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Ship</th><th>Wiki page shows</th><th>Game storage macro has</th></tr></thead>
+  <tbody>
+    <tr><td><code>gozanti_croc_raider</code></td><td>container, solid, liquid 5,000 each</td><td>universal 10,000 (container, solid, liquid)</td></tr>
+    <tr><td><code>gozanti_croc_bm</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
+    <tr><td><code>gr75b</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
+    <tr><td><code>jtype_transport</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
+    <tr><td><code>procursator</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
+    <tr><td><code>obliviator</code></td><td>universal 10,000</td><td>container 5,000</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="prose">Compared 2026-10-17: every ship on the wiki (base SWI, DABC, RSP), the page's parsing logic against the cargo in the storage macros of SWI 0.9.1.</p>
 
 <h2>Smaller issues found while reading the data</h2>
 <ul class="prose">
