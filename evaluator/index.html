@@ -79,7 +79,7 @@
 </main>
 
 <dialog id="build-dialog">
-  <form method="dialog">
+  <form method="dialog" novalidate>
     <h2>Player production</h2>
     <div class="row">
       <input id="build-search" type="search" placeholder="Filter…">
@@ -92,7 +92,7 @@
 </dialog>
 
 <dialog id="compare-dialog">
-  <form method="dialog">
+  <form method="dialog" novalidate>
     <div class="row between"><h2 class="title">Compare designs</h2>
       <span class="row"><label class="check small"><input type="checkbox" id="compare-diff"> Only rows that differ</label><button value="close">Close</button></span></div>
     <p id="compare-note" class="muted small"></p>
@@ -101,7 +101,7 @@
 </dialog>
 
 <dialog id="profile-dialog">
-  <form method="dialog">
+  <form method="dialog" novalidate>
     <div class="row between"><h2 class="title">Rating profile</h2><button value="close">Close</button></div>
     <div class="row"><select id="pd-pick"></select><span id="pd-state" class="small"></span></div>
     <div class="row">
@@ -139,15 +139,15 @@
       <h3>Threat profiles</h3>
       <table id="pd-threats" class="compact"></table>
       <h3>Trip model</h3>
-      <div class="row small"><label>Leg length <input type="number" id="pd-km" min="1" max="1000" step="5"> km</label>
-        <label>Turn onto course <input type="number" id="pd-turn" min="0" max="180" step="5"> °</label></div>
+      <div class="row small"><label>Leg length <input type="number" id="pd-km" min="1" max="1000" step="1"> km</label>
+        <label>Turn onto course <input type="number" id="pd-turn" min="0" max="180" step="1"> °</label></div>
       <p class="muted small">Measured game physics (speeds, accelerations, turn rates, DPS, shields) is not configurable.</p>
     </section>
   </form>
 </dialog>
 
 <dialog id="settings">
-  <form method="dialog">
+  <form method="dialog" novalidate>
     <div class="row between"><h2 class="title">Settings</h2><button value="close">Close</button></div>
 
     <section>

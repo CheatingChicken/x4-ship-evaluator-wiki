@@ -211,3 +211,7 @@ button.primary { background: var(--accent-dim); border-color: var(--accent); fon
 .filepick { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-2); cursor: pointer; }
 .filepick input { width: 0; height: 0; opacity: 0; position: absolute; }
 .filepick:focus-within { outline: 2px solid var(--accent); }
+
+/* Defence split in the rating profile dialog: label | value, like the Settings grid. */
+#profile-dialog .grid2:not(.wide) { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 4px 10px; align-items: center; font-size: 13px; max-width: 460px; }
+#profile-dialog .grid2:not(.wide) input[type=number] { width: 70px; }

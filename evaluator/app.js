@@ -954,11 +954,11 @@
     }
     // Shared: defence split, threat profiles, trip.
     $("#pd-defence").innerHTML = O.DEFENCE_PARTS.map((x) =>
-      `<label for="pdd-${x.key}">${x.label}</label><span><input type="number" id="pdd-${x.key}" data-def="${x.key}" min="0" max="100" value="${PF.defence[x.key]}"> %</span>`).join("")
+      `<label for="pdd-${x.key}">${x.label}</label><span><input type="number" id="pdd-${x.key}" data-def="${x.key}" min="0" max="100" step="any" value="${PF.defence[x.key]}"> %</span>`).join("")
       + `<span class="muted small">Shares are rescaled to total 100%.</span><span></span>`;
     $("#pd-threats").innerHTML = `<tr><th>Profile</th><th>Defence weight</th><th>Shields</th><th>Turrets</th><th>Guns</th></tr>` +
       Object.entries(PF.threats).map(([k, t]) => `<tr><td>${O.THREATS[k].label}</td>
-        <td><input type="number" data-t="${k}" data-tf="defence" min="0" max="10" value="${t.defence}"></td>
+        <td><input type="number" data-t="${k}" data-tf="defence" min="0" max="10" step="any" value="${t.defence}"></td>
         ${["shield", "turret", "weapon"].map((r) => `<td><input type="checkbox" data-t="${k}" data-tr="${r}" ${t.require[r] ? "checked" : ""}></td>`).join("")}</tr>`).join("");
     $("#pd-km").value = PF.trip.km;
     $("#pd-turn").value = PF.trip.turn;
