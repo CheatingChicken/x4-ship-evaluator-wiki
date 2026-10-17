@@ -92,7 +92,9 @@
     teladi: "Teladi Company", terran: "Terran Protectorate", trinity: "Realm of the Trinity", visitor: "Visitor",
     xenon: "Xenon", yaki: "Yaki" };
   const isSwi = (D.meta || {}).source === "wiki" || ((D.meta || {}).load_order || []).some((e) => /interworlds/i.test((e.name || "") + (e.id || "")));
-  let hideVanilla = !(storedState.display && storedState.display.hideVanilla === false);
+  // Data from the wiki is always SWI: the base game's factions are always hidden there, no toggle.
+  const wikiData = (D.meta || {}).source === "wiki";
+  let hideVanilla = wikiData || !(storedState.display && storedState.display.hideVanilla === false);
   const vanilla = (f) => hideVanilla && isSwi && f in VANILLA && (D.factions[f] || f) === VANILLA[f];
 
   // ---------------------------------------------------------------- state
@@ -429,7 +431,7 @@
     $("#opt-short").checked = !!st.display.shortFactions;
     $("#opt-vanilla").checked = hideVanilla;
     seg($("#opt-density"), DENSITIES, st.display.density || "normal", (v) => { st.display.density = v; applyDisplay(); save(); renderSettings(); });
-    $("#opt-vanilla").closest("label").hidden = !isSwi;
+    $("#opt-vanilla").closest("label").hidden = !isSwi || wikiData;
     renderSaveFile();
     renderWikiMods();
     // Game data (re-export from the game files) only works with the local server (serve.py), so
