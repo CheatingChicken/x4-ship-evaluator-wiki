@@ -1239,6 +1239,8 @@
   function wireProfile() {
     $("#profile-pick").onchange = (e) => pickProfile(e.target.value);
     $("#profile-edit").onclick = () => { pdRole = st.role; renderProfileDialog(); $("#profile-dialog").showModal(); };
+    // From Settings: one dialog at a time, so Settings closes as the profile editor opens.
+    $("#settings-profile").onclick = () => { $("#settings").close(); $("#profile-edit").click(); };
     $("#pd-pick").onchange = (e) => pickProfile(e.target.value);
     $("#profile-dialog").onchange = (e) => { if (e.target.id !== "pd-pick" && e.target.id !== "pd-import-file" && e.target.id !== "pd-ban-in") onProfileInput(e); };
     // The role panel is rebuilt on every render, so its buttons are handled here, by delegation.

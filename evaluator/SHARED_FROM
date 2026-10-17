@@ -1,10 +1,10 @@
 {
  "repo": "CheatingChicken/x4-ship-evaluator",
- "commit": "8fe8b931225cb592c2c059dcbb9ccf1d89eeb5ee",
+ "commit": "0ee789724115bcef781612f3ca29a063971a16a6",
  "files": {
-  "evaluator/index.html": "4f2041fda3f7f7fb4ee7348bddea800f8b43bd8e419dfaad49a0fb2d21dbd9aa",
+  "evaluator/index.html": "f26920be3f7ba5f66caff594d2afc2e1a7bd692e3568fc72dc05f0eab1d83468",
   "evaluator/style.css": "3a2fed66e71f909ae6a6d7cdffaf2b87e711fab941e902e8b6c026f71360459d",
-  "evaluator/app.js": "1d293706b246c1753730ca68de8f05c4f4788cdc38ebcfe9cf67f89bfae31ab2",
+  "evaluator/app.js": "3c30ffea232e3a9a2057795875b7f42857076d823d3995fa8971c382110f3770",
   "evaluator/optimiser.js": "d6d98072065ec4f7347ce719a9e07fdaae9eb37eb5d51b90c511a5a0287602b1",
   "evaluator/profile.js": "829f0e61659c1da8f8c2b60d85fe19a272aa9dec9bf016cb964cb827560f6c9e",
   "evaluator/presets.js": "50de1a1f7824d3ae9f2ade10cd8212b7f363ae2e01eb6210966e819afa849d12",
