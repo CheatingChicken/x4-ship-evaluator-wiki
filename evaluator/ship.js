@@ -47,7 +47,9 @@
       evaluatorLink: true,   // "Open in the evaluator"
       wikiLink: true,        // the same ship's page on the wiki, for comparison
       modToggles: true,      // switch submods' equipment on and off
-      icons: true,           // ship class icons in the lists, from the wiki's own /ships/icons/
+      icons: true,           // ship class icons in the lists and headings, from the wiki's own /ships/icons/
+      image: true,           // the wiki's picture of the ship, where it has one
+      equipmentFilter: true, // a search box over the option tables
     },
     wiki: "https://swi.siifr.net",
     icons: "https://swi.siifr.net/ships/icons/",
@@ -134,12 +136,27 @@
   ];
   const withDetail = (c, list) => list.map((p) => Object.assign({ d: c.det.parts[p.id] || {} }, p));
 
-  function infobox(c, s, d, h) {
+  // The wiki's own ship picture (/ships/images/<size>/<ship>.png, under /submods/<mod> for submod
+  // ships), as its ship pages load it. Many ships have none yet: then the picture removes itself.
+  const IMAGE_SIZE = { s: "small", m: "medium", l: "large", xl: "extralarge", xxl: "huge" };
+  function shipImage(c, s, d) {
+    const pg = d.page || {};
+    if (!pg.key || !IMAGE_SIZE[pg.hull]) return "";
+    const url = `${c.cfg.wiki}${s.origin === "swi" ? "" : "/submods/" + s.origin}/ships/images/${IMAGE_SIZE[pg.hull]}/${pg.key}.png`;
+    return `<figure class="shipimg"><img src="${esc(url)}" alt="${esc(s.name)}" onerror="this.parentNode.remove()"></figure>`;
+  }
+  // the ship's class icon from the wiki (/ships/icons/), as in its lists
+  const classIcon = (c, s) => {
+    const i = (c.det.ships[s.id] || {}).icon;
+    return i ? `<img class="shipicon" src="${esc(c.cfg.icons + i + ".png")}" alt="" onerror="this.remove()">` : "";
+  };
+
+  function infobox(c, s, d, h, image) {
     const cargo = s.cargo || {}, hang = s.hangar || {};
     const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
     const head = (t) => `<tr class="ib-head"><th colspan="2">${t}</th></tr>`;
     const price = d.price || {};
-    return `<aside class="infobox"><table>
+    return `<aside class="infobox">${image || ""}<table>
       ${head("Ship")}${row("Identifier", `<code>${esc(s.ware)}</code>`)}${row("Size", s.size.toUpperCase())}${row("Class", esc(s.type || "—"))}
       ${row("Purpose", esc(s.purpose || "—"))}${row("Licence", h.licence(s.licence))}
       ${d.supply != null ? row("Maintenance supply cost", num(d.supply, 0)) : ""}
@@ -171,32 +188,34 @@
     const items = Object.entries(s.engines).map(([i, row]) => Object.assign({ row }, withDetail(c, [c.D.parts[+i]])[0]))
       .sort((a, b) => b.row.TravelSpeed - a.row.TravelSpeed);
     const n = items.length ? items[0].row.engines : 0;
-    return section("engines", "Engine options", `<p class="muted small">Values for this hull with ${n} engine${n === 1 ? "" : "s"} of the kind fitted. Speeds and accelerations are the game's own figures (checked with an in-game probe); boost recharge is 100 ÷ the engine's recharge time, as on the wiki.</p>` + table([
+    return section("engines", "Engine options", `<p class="muted small">Values for this hull with ${n} engine${n === 1 ? "" : "s"} of the kind fitted. Speeds and accelerations are the game's own figures (checked with an in-game probe); boost recharge is 100 ÷ the engine's recharge time, as on the wiki.</p>` + filterGroup("", table([
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Speed<br>m/s", (p) => num(p.row.ForwardSpeed)], ["Accel.<br>m/s²", (p) => num(p.row.ForwardAcceleration)],
       ["Boost<br>m/s", (p) => num(p.row.BoostSpeed)], ["Boost acc.<br>m/s²", (p) => num(p.row.BoostAcceleration)],
       ["Boost for<br>s", (p) => num(p.row.BoostMaxDuration)], ["Boost recharge<br>%/s", (p) => (p.d.boostRecharge ? num(100 / p.d.boostRecharge, 2) : "—")],
       ["Travel<br>m/s", (p) => num(p.row.TravelSpeed, 0)], ["Travel acc.<br>m/s²", (p) => num(p.row.TravelAcceleration)],
       ["Charge<br>s", (p) => num(p.row.TravelChargeTime)],
-    ].concat(buyCols(h)), items));
+    ].concat(buyCols(h)), items, "filterable")));
   }
 
   function thrusters(c, s, h) {
     const items = Object.entries(s.thrusters).map(([i, row]) => Object.assign({ row }, withDetail(c, [c.D.parts[+i]])[0]))
       .sort((a, b) => b.row.YawSpeed - a.row.YawSpeed);
-    return section("thrusters", "Thruster options", `<p class="muted small">Thrusters are the base game's (SWI uses the stock ones). Turn rates for this hull, in degrees per second.</p>` + table([
+    return section("thrusters", "Thruster options", `<p class="muted small">Thrusters are the base game's (SWI uses the stock ones). Turn rates for this hull, in degrees per second.</p>` + filterGroup("", table([
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Yaw<br>°/s", (p) => num(p.row.YawSpeed * DEG)], ["Pitch<br>°/s", (p) => num(p.row.PitchSpeed * DEG)], ["Roll<br>°/s", (p) => num(p.row.RollSpeed * DEG)],
       ["Strafe<br>m/s", (p) => num(p.row.HorizontalStrafeSpeed)], ["Strafe acc.<br>m/s²", (p) => num(p.row.HorizontalStrafeAcceleration)],
-    ].concat(buyCols(h)), items));
+    ].concat(buyCols(h)), items, "filterable")));
   }
 
+  // A heading (optional) and a table the search box filters; hidden as a whole when nothing in it matches.
+  const filterGroup = (headingHtml, tableHtml) => `<div class="filtergroup">${headingHtml}${tableHtml}</div>`;
   const groupTitle = (g) => `${g.count} × ${esc((g.size || "").toUpperCase())} ${esc(g.kind)} slot${g.count === 1 ? "" : "s"}${g.mining ? " (mining)" : ""}`;
   function perGroup(c, s, kind, cols, sortKey) {
     const groups = s.groups.filter((g) => g.kind === kind);
     if (!groups.length) return `<p class="muted">This hull has no ${kind} slots.</p>`;
-    return groups.map((g) => `<h3>${groupTitle(g)}</h3>` +
-      table(cols, withDetail(c, g.cands.map((i) => c.D.parts[i])).sort((a, b) => sortKey(b) - sortKey(a)))).join("");
+    return groups.map((g) => filterGroup(`<h3>${groupTitle(g)} <span class="muted"></span></h3>`,
+      table(cols, withDetail(c, g.cands.map((i) => c.D.parts[i])).sort((a, b) => sortKey(b) - sortKey(a)), "filterable"))).join("");
   }
   function shields(c, s, h) {
     return section("shields", "Shield options", perGroup(c, s, "shield", [
@@ -285,16 +304,19 @@
       on.description && d.description ? section("description", "Description", d.description.split("\n").map((p) => `<p>${esc(p)}</p>`).join("")) : "",
       on.loadouts ? section("loadouts", "Best loadouts", `<p class="muted small">The evaluator's best fit per role with the default rating profile, any seller, no save.</p><div id="loadouts">${loadoutHtml(c, s, c.loadouts, h)}</div>`) : "",
       on.slotLayout ? slotLayout(c, s, d) : "",
+      on.equipmentFilter && (on.engines || on.thrusters || on.shields || on.weapons || on.turrets)
+        ? searchBox("Filter equipment by name, use, seller or mod…", "parts") : "",
       on.engines ? engines(c, s, h) : "",
       on.thrusters ? thrusters(c, s, h) : "",
       on.shields ? shields(c, s, h) : "",
       on.weapons ? weapons(c, s, h) : "",
       on.turrets ? turrets(c, s, h) : "",
     ].join("");
-    return `${crumbs}<header class="shiphead"><h1>${esc(s.name)}${h.modChip(s.origin)}</h1>
+    return `${crumbs}<header class="shiphead"><h1>${on.icons ? classIcon(c, s) : ""}${esc(s.name)}${h.modChip(s.origin)}</h1>
         <p class="muted">${esc(s.size.toUpperCase())} ${esc(s.type || "")}${s.variation ? " · " + esc(s.variation) : ""}</p>
         ${links.length ? `<p class="links">${links.join(" ")}</p>` : ""}</header>
-      <div class="shipgrid${on.infobox ? "" : " noinfo"}"><div class="shipmain">${main}</div>${on.infobox ? infobox(c, s, d, h) : ""}</div>`;
+      <div class="shipgrid${on.infobox ? "" : " noinfo"}"><div class="shipmain">${on.image && !on.infobox ? shipImage(c, s, d) : ""}${main}</div>` +
+      `${on.infobox ? infobox(c, s, d, h, on.image ? shipImage(c, s, d) : "") : ""}</div>`;
   }
 
   // ---------------------------------------------------------------- list pages
@@ -316,17 +338,18 @@
       ["Hull", (s) => num(s.hull, 0)], ["Cargo", (s) => num(Math.max(0, ...Object.values(s.cargo || {})), 0)],
       ["Hangar", (s) => num(((s.hangar || {}).dock_s || 0) + ((s.hangar || {}).dock_m || 0), 0)],
       ["Price", (s) => cr(s.price)], ["Sold by", (s) => h.sellers(s.owners), { txt: true }],
-    ], ships, "index");
+    ], ships, "index filterable");
   }
-  // ships grouped by size: a heading and a table per size (the wiki's full list layout); the search
-  // hides a group with no hits
+  // ships grouped by size: a heading and a table per size (the wiki's full list layout)
   const bySize = (c, ships, h) => HULLS.map((z) => {
     const list = ships.filter((s) => hullOf(c, s) === z);
-    return list.length ? `<div class="sizegroup"><h2 id="${z}">${z.toUpperCase()} <span class="muted">${list.length}</span></h2>` + shipTable(c, list, h) + `</div>` : "";
+    return list.length ? filterGroup(`<h2 id="${z}">${z.toUpperCase()} <span class="muted">${list.length}</span></h2>`, shipTable(c, list, h)) : "";
   }).join("");
-  // the list pages' search box (wired up by wireSearch in the browser)
-  const searchBox = `<p class="listsearch"><input type="search" id="list-q" placeholder="Filter by name, class, purpose or seller…" autocomplete="off">` +
-    ` <span id="list-count" class="muted small"></span></p>`;
+  // The search box over the page's filterable tables (wired up by wireSearch in the browser).
+  // noun: what a row is, for the hit count ("12 of 69 ships")
+  const searchBox = (placeholder, noun) => `<p class="listsearch"><input type="search" id="list-q" placeholder="${esc(placeholder)}" ` +
+    `autocomplete="off" data-noun="${esc(noun)}"> <span id="list-count" class="muted small"></span></p>`;
+  const shipSearch = searchBox("Filter by name, class, purpose or seller…", "ships");
   const linkList = (items) => `<ul class="linklist">${items.map(([href, label, n]) =>
     `<li><a href="./${href}">${label}</a> <span class="muted small">${n}</span></li>`).join("")}</ul>`;
 
@@ -359,16 +382,16 @@
       }
       return { title: modName ? prefix : "Vessel Catalogue", html };
     }
-    if (r.list === "full") return { title: prefix + " – full list", html: crumbs("Full list") + head(prefix + " – full list", "full-list") + searchBox + bySize(c, pool, h) };
+    if (r.list === "full") return { title: prefix + " – full list", html: crumbs("Full list") + head(prefix + " – full list", "full-list") + shipSearch + bySize(c, pool, h) };
     if (r.list === "hull") {
       const sizes = `<p class="sizes">${HULLS.map((z) => `<a href="./${listPath(r.mod, z)}"${r.hull === z ? ` class="on"` : ""}>${z.toUpperCase()}</a>`).join("")}</p>`;
       const title = `${modName ? modName + " " : ""}${r.hull.toUpperCase()} ships`;
-      return { title, html: crumbs(r.hull.toUpperCase()) + head(title, r.hull) + sizes + searchBox + shipTable(c, pool.filter((s) => hullOf(c, s) === r.hull), h) };
+      return { title, html: crumbs(r.hull.toUpperCase()) + head(title, r.hull) + sizes + shipSearch + shipTable(c, pool.filter((s) => hullOf(c, s) === r.hull), h) };
     }
     const f = factionOf(c, r.code);
     if (!f) return null;
     const title = `${prefix} – ${c.D.factions[f] || f}`;
-    return { title, html: crumbs(c.D.factions[f] || f) + head(title, r.code, "Every ship this faction sells.") + searchBox + bySize(c, pool.filter((s) => s.owners.includes(f)), h) };
+    return { title, html: crumbs(c.D.factions[f] || f) + head(title, r.code, "Every ship this faction sells.") + shipSearch + bySize(c, pool.filter((s) => s.owners.includes(f)), h) };
   }
 
   // ---------------------------------------------------------------- browser
@@ -406,25 +429,31 @@
       };
     });
   }
-  // The list pages' search: every word must appear in the row's text, its sellers included (also
-  // the ones behind "+N more"). Groups without a hit are hidden; the query is kept in ?q=.
+  // The search box (list pages: ships; ship pages: equipment): every word must appear in the row's
+  // text, its sellers included (also those behind "+N more") and its mod's full name. Only tables
+  // marked "filterable" take part. A group (.filtergroup) without a hit is hidden, its heading shows
+  // the hits, and a section left with no visible group is hidden too. The query is kept in ?q=.
   function wireSearch(root) {
     const q = root.querySelector("#list-q"), count = root.querySelector("#list-count");
     if (!q) return;
-    const rows = [...root.querySelectorAll("tbody tr")];
+    const noun = q.dataset.noun || "rows";
+    const rows = [...root.querySelectorAll("table.filterable tbody tr")];
     const hay = rows.map((tr) => (tr.textContent + " " + [...tr.querySelectorAll("[title]")].map((x) => x.title).join(" ")).toLowerCase());
     const apply = () => {
       const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
       let n = 0;
       rows.forEach((tr, i) => { tr.hidden = !words.every((w) => hay[i].includes(w)); if (!tr.hidden) n++; });
-      root.querySelectorAll(".sizegroup").forEach((g) => {
+      root.querySelectorAll(".filtergroup").forEach((g) => {
         const hits = g.querySelectorAll("tbody tr:not([hidden])").length, all = g.querySelectorAll("tbody tr").length;
         g.hidden = !hits;
-        const label = g.querySelector("h2 .muted");
-        if (label) label.textContent = words.length ? `${hits} of ${all}` : String(all);
+        const label = g.querySelector("h2 .muted, h3 .muted");
+        if (label) label.textContent = words.length ? `${hits} of ${all}` : (g.querySelector("h2") ? String(all) : "");
       });
-      root.querySelectorAll("table").forEach(stripe);
-      count.textContent = words.length ? `${n} of ${rows.length} ships` : `${rows.length} ships`;
+      root.querySelectorAll("section").forEach((sec) => {
+        if (sec.querySelector(".filtergroup")) sec.hidden = !sec.querySelector(".filtergroup:not([hidden])");
+      });
+      root.querySelectorAll("table.filterable").forEach(stripe);
+      count.textContent = words.length ? `${n} of ${rows.length} ${noun}` : `${rows.length} ${noun}`;
       const url = new URL(location.href);
       if (q.value.trim()) url.searchParams.set("q", q.value.trim()); else url.searchParams.delete("q");
       history.replaceState(null, "", url);

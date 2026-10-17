@@ -70,4 +70,9 @@ a.button:hover { border-color: var(--accent); text-decoration: none; }
 .linklist { list-style: none; padding: 0; margin: 0 0 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; }
 .linklist li { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent-dim); border-radius: 4px; padding: 8px 12px; }
 .shipicon { height: 16px; width: auto; vertical-align: middle; margin-right: 6px; }
-.shippage h2 .muted { font-weight: 400; }
+.shiphead h1 .shipicon { height: 24px; margin-right: 10px; }
+.shippage h2 .muted, .shippage h3 .muted { font-weight: 400; }
+
+/* the wiki's ship picture, at the top of the infobox (or of the page without one) */
+.shipimg { margin: 8px 0 4px; text-align: center; }
+.shipimg img { max-width: 100%; max-height: 260px; height: auto; border-radius: 4px; }
