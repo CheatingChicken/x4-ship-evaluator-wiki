@@ -1,0 +1,17 @@
+{
+ "repo": "CheatingChicken/x4-ship-evaluator",
+ "commit": "9f7883df702004c3a39bfec34defd1d0e905fa7f",
+ "files": {
+  "evaluator/index.html": "376de427f49f7d8e5cddbbfc7a313fa66c6adc65e32cdd05bd9ee4fbefc407d9",
+  "evaluator/style.css": "8e17e0d80f70f65859ea02c12e4dda2e18301e99785fb2a4fdc97697a8a3afb8",
+  "evaluator/app.js": "8273db33019d5b208de67839e20eca44e3ad8d49056b07bc6b425f853dd1e661",
+  "evaluator/optimiser.js": "5bea1e13f1915495a4afbf5f0f1b37a6d6c8e27bc0894c6205ec1c89f3eb0fdd",
+  "evaluator/profile.js": "829f0e61659c1da8f8c2b60d85fe19a272aa9dec9bf016cb964cb827560f6c9e",
+  "evaluator/presets.js": "50de1a1f7824d3ae9f2ade10cd8212b7f363ae2e01eb6210966e819afa849d12",
+  "evaluator/setup.js": "52d3439a11d2092068603c929ab4a31719a747f814cea12420dbca4b48d58754",
+  "evaluator/livereload.js": "b1b47951fb8e26969fab44f660920420469d49acfad16a121ad95701d65c6d7a",
+  "tests/test_optimiser.js": "bc84023e105a5b4d4059c18b646f5915f8fde2d102c77e44f3cf1829dc3a69b3",
+  "tests/test_profile.js": "81b545015fa9ba9765154b29a5f094089183dbb7c5e1927405f44dd02344d21e",
+  "tests/baseline.js": "72f5778a13de983713b481c41160c4e245da5a95c2d800c32b5d6394f55de81e"
+ }
+}

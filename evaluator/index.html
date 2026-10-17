@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X4 Ship Evaluator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>X4 Ship Evaluator</h1>
+  <div id="status"></div>
+  <button id="settings-open" class="gear" title="Settings">⚙ Settings</button>
+</header>
+<main>
+  <aside id="filters">
+    <section>
+      <h2>Single ship</h2>
+      <div class="row nowrap"><input id="focus" type="search" list="ship-list" placeholder="Pick one ship to fit…" autocomplete="off">
+        <button id="focus-clear" title="Back to ranking all ships">×</button></div>
+      <datalist id="ship-list"></datalist>
+      <p id="focus-note" class="muted small"></p>
+    </section>
+    <section>
+      <h2>Role</h2>
+      <div id="roles" class="seg"></div>
+      <div id="role-options"></div>
+    </section>
+    <section>
+      <h2>Loadouts</h2>
+      <div id="sourcing" class="chips" title="Single shipyard: one row per faction selling the hull, fitted only from its own equipment (one stop, no player production). Mixed: parts from every selected shipyard plus your own production."></div>
+      <label class="check small"><input type="checkbox" id="best-only"> Best variant per ship only</label>
+    </section>
+    <section>
+      <h2>Size</h2>
+      <div id="sizes" class="chips"></div>
+    </section>
+    <section>
+      <h2>Price</h2>
+      <div class="range2">
+        <div class="track"><div id="price-fill" class="fill"></div></div>
+        <input id="price-lo" type="range" min="0" step="1" aria-label="Minimum price">
+        <input id="price-hi" type="range" min="0" step="1" aria-label="Maximum price">
+      </div>
+      <div class="row between small"><span id="price-lo-label"></span><span id="price-hi-label"></span></div>
+      <div id="price-basis" class="seg"></div>
+    </section>
+    <section>
+      <h2>Shipyards <span id="faction-count" class="muted"></span></h2>
+      <label class="check" id="use-save-wrap"><input type="checkbox" id="use-save"> Use my save: licences + existing shipyards</label>
+      <div class="row buttons">
+        <button data-factions="all">All</button><button data-factions="none">None</button>
+        <button data-factions="licensed" id="licensed-btn" title="Factions with a shipyard or equipment dock in your save that will dock you">Reachable</button>
+      </div>
+      <input id="faction-search" type="search" placeholder="Filter factions…">
+      <div id="factions" class="list"></div>
+    </section>
+    <section>
+      <h2>Player production <span id="build-count" class="muted"></span></h2>
+      <p class="muted small">Ships and parts your own wharves and docks can build. Always available.</p>
+      <button id="build-edit">Edit list…</button>
+    </section>
+    <section>
+      <h2>Rating profile</h2>
+      <div class="row nowrap"><select id="profile-pick" title="Every rating decision: weights, curves, limits, slot rules, formulas"></select><button id="profile-edit">Edit…</button></div>
+      <p class="small" id="profile-state"></p>
+      <h2 class="sub">Weights</h2>
+      <div id="weights"></div>
+      <button id="weights-reset" class="small">Reset weights to saved profile</button>
+    </section>
+  </aside>
+  <section id="results">
+    <div id="summary" class="muted"></div>
+    <div id="sortbar" class="small"></div>
+    <div id="comparebar" class="small" hidden></div>
+    <div class="table-wrap"><table id="table"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <aside id="detail"><p class="muted">Select a ship to see and edit its loadout.</p></aside>
+</main>
+
+<dialog id="build-dialog">
+  <form method="dialog">
+    <h2>Player production</h2>
+    <div class="row">
+      <input id="build-search" type="search" placeholder="Filter…">
+      <button type="button" id="build-seed">Seed from save</button>
+      <button type="button" id="build-clear">Clear</button>
+    </div>
+    <div id="build-list" class="list tall"></div>
+    <div class="row end"><button value="close">Done</button></div>
+  </form>
+</dialog>
+
+<dialog id="compare-dialog">
+  <form method="dialog">
+    <div class="row between"><h2 class="title">Compare designs</h2>
+      <span class="row"><label class="check small"><input type="checkbox" id="compare-diff"> Only rows that differ</label><button value="close">Close</button></span></div>
+    <p id="compare-note" class="muted small"></p>
+    <div class="compare-wrap"><table id="compare-table"></table></div>
+  </form>
+</dialog>
+
+<dialog id="profile-dialog">
+  <form method="dialog">
+    <div class="row between"><h2 class="title">Rating profile</h2><button value="close">Close</button></div>
+    <div class="row"><select id="pd-pick"></select><span id="pd-state" class="small"></span></div>
+    <div class="row">
+      <button type="button" id="pd-save">Save</button><button type="button" id="pd-saveas">Save as…</button>
+      <button type="button" id="pd-rename">Rename</button><button type="button" id="pd-delete">Delete</button>
+      <button type="button" id="pd-revert">Discard changes</button>
+    </div>
+    <div class="row">
+      <button type="button" id="pd-export">Export file</button><button type="button" id="pd-copy">Copy share code</button>
+      <button type="button" id="pd-import-toggle">Import…</button>
+    </div>
+    <div id="pd-import" hidden>
+      <textarea id="pd-import-text" rows="3" placeholder="Paste a share code (X4EP1:…) or profile JSON"></textarea>
+      <div class="row"><button type="button" id="pd-import-go">Import pasted</button> or <input type="file" id="pd-import-file" accept=".json,application/json"></div>
+    </div>
+    <p id="pd-import-msg" class="small"></p>
+
+    <section>
+      <h2>About this profile</h2>
+      <div class="grid2 wide"><label for="pd-author">Author</label><input id="pd-author" maxlength="80">
+        <label for="pd-notes">Notes</label><textarea id="pd-notes" rows="2" maxlength="2000"></textarea></div>
+    </section>
+
+    <section>
+      <h2>Per role</h2>
+      <div class="seg" id="pd-roles"></div>
+      <div id="pd-role"></div>
+      <datalist id="pd-parts"></datalist>
+    </section>
+
+    <section>
+      <h2>Formulas <span class="muted small">(judgement, not game data)</span></h2>
+      <h3>Defence rating split (traders and miners)</h3>
+      <div id="pd-defence" class="grid2"></div>
+      <h3>Threat profiles</h3>
+      <table id="pd-threats" class="compact"></table>
+      <h3>Trip model</h3>
+      <div class="row small"><label>Leg length <input type="number" id="pd-km" min="1" max="1000" step="5"> km</label>
+        <label>Turn onto course <input type="number" id="pd-turn" min="0" max="180" step="5"> °</label></div>
+      <p class="muted small">Measured game physics (speeds, accelerations, turn rates, DPS, shields) is not configurable.</p>
+    </section>
+  </form>
+</dialog>
+
+<dialog id="settings">
+  <form method="dialog">
+    <div class="row between"><h2 class="title">Settings</h2><button value="close">Close</button></div>
+
+    <section>
+      <h2>Display</h2>
+      <label class="check"><input type="checkbox" id="opt-ids"> Show internal IDs (ship macros)</label>
+      <label class="check"><input type="checkbox" id="opt-short"> Abbreviate faction names (in-game short names, e.g. IMP, KDY; full name on hover)</label>
+    </section>
+
+
+    <section class="server-only">
+      <h2>Save game</h2>
+      <p class="small" id="save-current"></p>
+      <div class="row"><select id="save-pick"></select><button type="button" id="save-import">Import</button></div>
+      <p class="muted small">Licences, reputation, shipyards and your blueprints are read from it. The page reloads when done.</p>
+    </section>
+
+    <section class="server-only">
+      <h2>Game data</h2>
+      <div id="setup-box"></div>
+      <p class="small" id="data-current"></p>
+      <label class="check small"><input type="checkbox" id="export-all"> Include disabled extensions</label>
+      <div class="row"><button type="button" id="data-export">Re-export from game files</button></div>
+      <p class="muted small">Reads the game and its enabled extensions (load order below) and rebuilds the data, about 25 s.
+        Run after updating the game or mods.</p>
+      <details><summary class="small">Load order</summary><ol id="load-order" class="small"></ol></details>
+    </section>
+
+    <p class="muted small" id="job-status"></p>
+    <p class="warn small" id="no-server" hidden>Save import and re-export need the local server: run <code>python serve.py</code>
+      and open http://localhost:8765/.</p>
+
+    <section>
+      <h2>Rating</h2>
+      <p class="small">Weights, score curves, limits, slot rules, which ships count for combat, the defence split, threat profiles and
+        the trip model all live in the <b>rating profile</b>: sidebar › Rating profile › Edit…</p>
+    </section>
+
+    <section>
+      <h2>Housekeeping</h2>
+      <div class="row"><button type="button" id="pins-clear">Clear pinned parts</button><button type="button" id="all-reset">Reset all settings</button></div>
+    </section>
+  </form>
+</dialog>
+
+<script src="data.js"></script>
+<script src="player.js" onerror="window.X4PLAYER = null"></script>
+<script src="optimiser.js"></script>
+<script src="profile.js"></script>
+<script src="setup.js"></script>
+<script src="presets.js"></script>
+<script src="app.js"></script>
+<script src="livereload.js"></script>
+</body>
+</html>

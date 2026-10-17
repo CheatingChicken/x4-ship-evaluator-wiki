@@ -1,0 +1,208 @@
+<title>SWI Wiki Data Gaps</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column for prose, wider scroll boxes for the data tables; status shown as chips. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #18202b;
+  --muted: #5a6575;
+  --line: #d9dee6;
+  --accent: #1d5f8c;
+  --ok: #217a4a;
+  --ok-bg: #e3f3ea;
+  --warn: #8a5a00;
+  --warn-bg: #fbf0d6;
+  --gap: #a3262f;
+  --gap-bg: #fbe4e5;
+  --code-bg: #eef1f5;
+  --display: "Archivo Narrow", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Archivo", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --surface: #18202a; --ink: #e3e8ef; --muted: #9aa6b6; --line: #2a3542;
+    --accent: #6fb2e0; --ok: #6fd39c; --ok-bg: #173527; --warn: #f0c46a; --warn-bg: #3a2e14;
+    --gap: #ff8c93; --gap-bg: #3d1c20; --code-bg: #212b37; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --surface: #18202a; --ink: #e3e8ef; --muted: #9aa6b6; --line: #2a3542;
+  --accent: #6fb2e0; --ok: #6fd39c; --ok-bg: #173527; --warn: #f0c46a; --warn-bg: #3a2e14;
+  --gap: #ff8c93; --gap-bg: #3d1c20; --code-bg: #212b37; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15.5px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.prose { max-width: 68ch; }
+header { border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 28px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 5vw, 44px); line-height: 1.05; margin: 0 0 10px; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 24px; margin: 44px 0 10px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 22px 0 6px; }
+p { margin: 0 0 12px; }
+.meta { color: var(--muted); font-size: 14px; margin: 0; }
+code, .mono { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 18px 0 8px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.item b { font-size: 14px; }
+.item span.note { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.chip { align-self: flex-start; font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; }
+.chip.ok { color: var(--ok); background: var(--ok-bg); }
+.chip.warn { color: var(--warn); background: var(--warn-bg); }
+.chip.gap { color: var(--gap); background: var(--gap-bg); }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); margin: 12px 0 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--bg); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.what { min-width: 170px; font-weight: 600; }
+td.src { min-width: 260px; }
+td.fix { min-width: 220px; }
+td .chip { margin-bottom: 4px; display: inline-block; }
+ul { padding-left: 20px; margin: 6px 0 12px; }
+li { margin: 4px 0; }
+.formula td:nth-child(2) { font-family: var(--mono); font-size: 13px; min-width: 300px; }
+.callout { border-left: 3px solid var(--accent); background: var(--surface); padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
+footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">For the swi.siifr.net maintainers · 2026-10-17</p>
+  <h1>SWI Wiki Data Gaps</h1>
+  <p class="meta">What a browser-only ship evaluator needs, what the wiki backend already serves, what is missing, and where each missing piece lives in the mod files.
+  Scope: base Star Wars Interworlds, DABC and RSP. Prepared by the X4 Ship Evaluator project.</p>
+</header>
+
+<div class="prose">
+  <p>The evaluator ranks ships per role (trader, miner, combat) and works out each ship's best loadout from the parts a player can buy. It needs ship physics, slots and wares, part stats and wares, thrusters, cargo and hangar sizes, and faction names.</p>
+  <p>Almost all of this is already in the wiki's JSON, as the raw game macros. The gaps below are small and come from files the mods already ship, except thrusters, which come from the base game.</p>
+</div>
+
+<div class="summary" aria-label="Status overview">
+  <div class="item"><span class="chip ok">Present</span><b>Ship physics, hull, crew, purpose, type</b><span class="note"><code>macro.properties</code>, incl. <code>physics.accfactors</code> where defined</span></div>
+  <div class="item"><span class="chip ok">Present</span><b>Ship slots and ship wares</b><span class="note"><code>components</code>; <code>ware</code> with price, owner, licence</span></div>
+  <div class="item"><span class="chip ok">Present</span><b>Part stats</b><span class="note">engines, shields, weapons, turrets with <code>bullet</code></span></div>
+  <div class="item"><span class="chip warn">Partial</span><b>Part price, sellers, licence</b><span class="note">base SWI via swi-api <code>/wares</code> only; none for DABC and RSP</span></div>
+  <div class="item"><span class="chip gap">Missing</span><b>Thrusters</b><span class="note">no thruster data on either host</span></div>
+  <div class="item"><span class="chip gap">Missing</span><b>Cargo and hangar capacity</b><span class="note">only storage macro names in ship connections</span></div>
+  <div class="item"><span class="chip gap">Missing</span><b>Faction names</b><span class="note">only a short-code map inside the ship page script</span></div>
+  <div class="item"><span class="chip warn">Limited</span><b>Cross-origin access</b><span class="note">readable only from pages on swi.siifr.net</span></div>
+</div>
+
+<h2>Missing data and where it comes from</h2>
+<p class="prose">Paths are in the original mod layout (as extracted from the game), with the field to read. Every item can be extracted by the same pipeline that builds the current JSON.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Missing</th><th>Needed for</th><th>Source in the mod files</th><th>Fields</th><th>Suggested fix</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="what"><span class="chip gap">Missing</span><br>Thrusters</td>
+      <td>Turn rate, strafe, time to turn onto course</td>
+      <td class="src">Base game, not the mod: SWI comments its <code>thruster_gen_*</code> macros out, so the game uses the stock ones. <code>assets/props/Engines/macros/thruster_gen_{s,m,l,xl}_*_macro.xml</code> (18 parts, e.g. <code>thruster_gen_s_allround_01_mk1</code>); wares in the base game's <code>libraries/wares.xml</code></td>
+      <td><code>properties/thrust @yaw @pitch @roll @strafe</code>; tags from the component connection; ware <code>price</code>, <code>owner</code></td>
+      <td class="fix">Add an unpacked base-game folder to the generator's search roots and emit <code>equipment/thrusters.json</code> like the other part types. Ships already carry <code>macro.properties.thruster._tags</code> to match against.</td>
+    </tr>
+    <tr>
+      <td class="what"><span class="chip gap">Missing</span><br>Cargo capacity and type</td>
+      <td>Cargo, trade throughput</td>
+      <td class="src"><code>assets/props/Storage/macros/storage_*_macro.xml</code> in SWI and each submod. The ship JSON only names them (e.g. <code>storage_container_50000_macro</code>); the volume is in the name, the cargo type is not reliably.</td>
+      <td><code>properties/cargo @max @tags</code> (container, solid, liquid, condensate)</td>
+      <td class="fix">Copy <code>Storage/macros</code> into the organised layout (e.g. <code>wares/storage/</code>) and either resolve the storage connections in the ship JSON or publish a <code>storage.json</code> dictionary.</td>
+    </tr>
+    <tr>
+      <td class="what"><span class="chip gap">Missing</span><br>Hangar and dock capacity</td>
+      <td>Hangar size (carriers)</td>
+      <td class="src"><code>assets/props/Storage/macros/shipstorage_*_macro.xml</code>; DABC also keeps some under <code>assets/props/SurfaceElements/macros/</code> (e.g. <code>dabc_shipstorage_s_66_macro</code>); dock areas in <code>assets/structures/dock/macros/dockarea_*_macro.xml</code></td>
+      <td><code>properties/dock @capacity</code>, <code>properties/docksize @tags</code> (dock_s, dock_m)</td>
+      <td class="fix">Same as storage. Note that almost every ship has an XS storage (<code>shipstorage_gen_xs_01</code>, dock_xs × 10) for spacesuits and drones: a hangar count should only add dock_s and dock_m.</td>
+    </tr>
+    <tr>
+      <td class="what"><span class="chip warn">Partial</span><br>Part price, sellers, licence</td>
+      <td>What a player can buy where; price</td>
+      <td class="src">Each mod's <code>libraries/wares.xml</code>. Base SWI is served by swi-api <code>/wares</code> but not joined to the part files; DABC and RSP part wares are not served anywhere (DABC alone has 87 such parts).</td>
+      <td><code>ware/price @min @average @max</code>, <code>ware/owner @faction</code>, <code>ware/restriction @licence</code>, matched by <code>ware/component @ref</code></td>
+      <td class="fix">Attach the matching <code>ware</code> to each part file, as is already done for ships. Join on <code>component @ref</code> = part macro, not on the ware group (see the quirks below).</td>
+    </tr>
+    <tr>
+      <td class="what"><span class="chip gap">Missing</span><br>Faction names</td>
+      <td>Seller lists, licences, reputation</td>
+      <td class="src"><code>libraries/factions.xml</code> plus <code>t/0001.xml</code></td>
+      <td><code>faction @id @name @shortname</code> (text references to resolve)</td>
+      <td class="fix">Publish a small <code>factions.json</code>: id, name, short name. The page script's short-code map lacks <code>mandoraiders</code>, <code>ownerless</code>, <code>xenon</code> and <code>khaak</code>, which do appear as ware owners.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Smaller issues found while reading the data</h2>
+<ul class="prose">
+  <li><b>Unmatched base part wares.</b> 22 base parts don't match a ware by <code>component @ref</code>. Most are Xenon or legacy parts, but a few are filed under the wrong ware group: <code>weapon_sw4_s_laser</code> sits in group <code>turrets</code> and <code>turret_s_cec_twin</code> in <code>weapons</code>.</li>
+  <li><b>Unresolved names in base wares.</b> <code>ware._name</code> and <code>identification._name</code> in the base API still hold <code>{page,id}</code> references, which the submod JSON resolves to text.</li>
+  <li><b>No slot <code>_group</code> on base ships.</b> Submod ship files have it; the base API records don't.</li>
+  <li><b>Empty component entries.</b> About 15% of <code>components</code> entries are <code>{}</code> (dock-only matches). Harmless, but every reader has to skip them.</li>
+  <li><b>XS list.</b> <code>swi-api.siifr.net/ships/xs/list/full</code> answers HTTP 500 (a missing boarding-pod XML file).</li>
+  <li><b>Wiki page mix-up.</b> The page <code>/en/ships/xl</code> loads the DABC XL list instead of the base one.</li>
+</ul>
+
+<h3>Not gaps</h3>
+<ul class="prose">
+  <li><b>Missing <code>physics.accfactors</code></b> (all DABC ships, half of the base ships): the game treats a missing factor as 1.0. We confirmed this against the game's own figures.</li>
+  <li><b>All values are strings</b> in the JSON. That's fine; readers parse them.</li>
+</ul>
+
+<h2>Movement formulas, checked against the game</h2>
+<div class="prose">
+  <p>The wiki's notes list several movement formulas as candidates checked on the Bellator only. We measured them with an in-game probe that calls the shipyard's own statistics function (<code>GetLoadoutStatistics5</code>) on 2040 ship, engine and thruster combinations (X4 8.00 + SWI). Every formula below matched with 0.00% scatter.</p>
+</div>
+<div class="scroll">
+<table class="formula">
+  <thead><tr><th>Statistic</th><th>Formula</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td>Speed</td><td>engine thrust.forward × engines ÷ ship drag.forward</td><td>As in the wiki notes</td></tr>
+    <tr><td>Acceleration</td><td>engine thrust.forward × engines ÷ ship mass × ship accfactors.forward</td><td>Ships without accfactors use 1.0. For the Bellator the game's own statistic is exactly 30.6731, so the 30 on screen is display rounding</td></tr>
+    <tr><td>Boost speed</td><td>speed × engine boost.thrust</td><td>As in the wiki notes</td></tr>
+    <tr><td>Boost acceleration</td><td>acceleration × engine boost.acceleration</td><td>As in the wiki notes</td></tr>
+    <tr><td>Travel speed</td><td>speed × engine travel.thrust</td><td>As in the wiki notes</td></tr>
+    <tr><td>Travel acceleration</td><td>travel speed ÷ engine travel.attack; the plain acceleration when attack is 0</td><td>Why the Bellator shows 30: its attack is 0</td></tr>
+    <tr><td>Yaw, pitch, roll rate</td><td>thruster thrust.yaw ÷ ship drag.yaw (pitch, roll alike)</td><td>The quotient is in degrees per second; the game's statistics report it in rad/s</td></tr>
+    <tr><td>Strafe speed</td><td>thruster thrust.strafe ÷ ship drag.horizontal (vertical alike)</td><td>Needs the thruster</td></tr>
+    <tr><td>Strafe acceleration</td><td>thruster thrust.strafe ÷ ship mass × ship accfactors.horizontal (vertical alike)</td><td>Needs the thruster</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="prose">
+  <p>Two values the game does not report, so they stay unverified: yaw acceleration (thrust.yaw ÷ inertia.yaw) and travel deceleration (travel speed ÷ travel.release).</p>
+  <p><b>Weapon DPS is only approximate from the files.</b> Damage per shot × projectiles × shots per second (with magazines: shots ÷ (shots ÷ rate + reload)) is about 1.66 times too low for weapons and about 2.2 times too high for turrets, averaged over 470 parts the game measured. Treat computed DPS columns as estimates.</p>
+</div>
+
+<h2>Reading the data from another site</h2>
+<div class="prose">
+  <p>Browsers only let a page read data from another host when that host allows it (CORS). Today:</p>
+  <ul>
+    <li><b>swi-api.siifr.net</b> allows only <code>https://swi.siifr.net</code>.</li>
+    <li><b>The static JSON on swi.siifr.net</b> sends no CORS header, so only pages on swi.siifr.net itself can read it.</li>
+  </ul>
+  <p>So a page embedded on the wiki can read everything. A copy hosted elsewhere, for example on GitHub Pages, can't read anything until both hosts allow that origin: an origin added to swi-api's <code>cors()</code> options, and an <code>Access-Control-Allow-Origin</code> rule for the static JSON in Wiki.js or Cloudflare.</p>
+  <div class="callout">
+    <p><b>Our proposal:</b> embed the evaluator on the wiki, as offered. Until the gaps above are filled on your side, it loads a small supplement file (thrusters, storage, wares, factions) from our GitHub Pages, which any site may read. Each gap you close removes that part of the supplement.</p>
+  </div>
+</div>
+
+<h2>One note on SiifrWikiSubmodTool.ps1</h2>
+<div class="prose">
+  <p>We read the generator script, without a token. It looks careful: XML is parsed with DTDs ignored and no external resolution, the token is never stored, and uploads ask before they run.</p>
+  <p>One risk is worth a guard. <b>Convert mod folder</b> deletes <code>&lt;destination&gt;\&lt;mod&gt;</code> recursively when it exists and the user answers Y. If the extracted mod folder is itself named after the mod and the user picks its parent as the destination, the source is deleted before it is copied. A check that refuses a destination equal to, inside or containing the source would close that.</p>
+</div>
+
+<footer>
+  Prepared 2026-10-17 by the X4 Ship Evaluator project from the public swi.siifr.net and swi-api.siifr.net data, the wiki's own documentation (OrigModStructure.md, DESIGN.md, README.md) and a local X4 8.00 + SW Interworlds 0.9.1 install. Counts refer to that date.
+</footer>
+</div>

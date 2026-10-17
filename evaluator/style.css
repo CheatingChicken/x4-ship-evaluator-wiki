@@ -1,0 +1,201 @@
+:root {
+  --bg: #0e1116; --panel: #161b22; --panel-2: #1c2330; --line: #2a3342; --text: #d8dee9;
+  --muted: #8b95a5; --accent: #4fa3ff; --accent-dim: #24496f; --good: #59c27a; --warn: #e3b341;
+  --bad: #ef6b73; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+:root[data-theme="light"] {
+  --bg: #f4f6f9; --panel: #ffffff; --panel-2: #eef1f6; --line: #d6dce5; --text: #1d2430;
+  --muted: #5f6b7c; --accent: #1f6fd1; --accent-dim: #cfe0f7;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+/* Column layout: the header may wrap on narrow windows, so main takes whatever height is left. */
+body { display: flex; flex-direction: column; }
+header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
+#status { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.badge { padding: 2px 8px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.badge.warn { border-color: var(--warn); color: var(--warn); }
+.badge.good { border-color: var(--good); color: var(--good); }
+main { display: grid; grid-template-columns: 290px minmax(0, 1fr) 420px; flex: 1; min-height: 0; }
+aside, #results { overflow: auto; }
+#filters { border-right: 1px solid var(--line); padding: 12px; background: var(--panel); }
+#filters section { margin-bottom: 18px; }
+#detail { border-left: 1px solid var(--line); padding: 12px; background: var(--panel); }
+#results { padding: 12px; display: flex; flex-direction: column; min-height: 0; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.row.end { justify-content: flex-end; }
+.muted { color: var(--muted); } .small { font-size: 12px; }
+input[type=number], input[type=search], select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 4px; padding: 4px 6px; font: inherit; }
+input[type=number] { width: 72px; } input[type=search] { width: 100%; }
+button { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; cursor: pointer; font: inherit; }
+button:hover { border-color: var(--accent); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; margin-bottom: 6px; }
+.seg button { flex: 1; border: 0; border-radius: 0; }
+.seg button.on { background: var(--accent-dim); color: var(--text); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button.on { background: var(--accent-dim); border-color: var(--accent); }
+.list { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 4px; padding: 4px; margin-top: 6px; background: var(--panel-2); }
+.list.tall { max-height: 60vh; min-width: 560px; }
+.check { display: flex; gap: 6px; align-items: center; padding: 2px 4px; cursor: pointer; }
+.check .n { margin-left: auto; color: var(--muted); font-size: 12px; }
+.weight { display: grid; grid-template-columns: 1fr 110px 24px; align-items: center; gap: 6px; font-size: 13px; }
+.weight output { text-align: right; font-family: var(--mono); }
+.table-wrap { overflow: auto; flex: 1; border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+/* Text columns read left-aligned; numbers stay right-aligned. */
+th.txt, td.txt { text-align: left; }
+/* Score bar column: fixed width, bars start at the left edge of the cell. */
+th.barcol, td.barcol { width: 90px; min-width: 90px; text-align: left; padding-right: 0; }
+td.barcol .bar { margin: 0; display: block; }
+th { position: sticky; top: 0; background: var(--panel); cursor: pointer; user-select: none; font-weight: 600; }
+th.sorted::after { content: " ▾"; color: var(--accent); } th.sorted.asc::after { content: " ▴"; }
+tbody tr { cursor: pointer; } tbody tr:hover { background: var(--panel-2); } tbody tr.sel { background: var(--accent-dim); }
+td.score { font-family: var(--mono); font-weight: 600; }
+.bar { display: inline-block; height: 8px; background: var(--accent); border-radius: 3px; vertical-align: middle; }
+td .sub { color: var(--muted); font-size: 12px; }
+#detail h3 { margin: 0 0 2px; font-size: 16px; }
+#detail table { margin: 8px 0 14px; } #detail td:first-child { text-align: left; color: var(--muted); }
+.slot { display: grid; grid-template-columns: 110px 1fr; gap: 6px; align-items: center; margin: 5px 0; }
+.slot select { width: 100%; } .slot .pinned { border-color: var(--warn); }
+.slot label { font-size: 12px; color: var(--muted); }
+.src { font-size: 11px; color: var(--muted); }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; }
+dialog::backdrop { background: rgba(0, 0, 0, .5); }
+@media (max-width: 1200px) { main { grid-template-columns: 260px minmax(0, 1fr); overflow: auto; } #detail { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); } }
+
+/* Two-handle range: two transparent range inputs stacked on one track; only the thumbs take input. */
+.range2 { position: relative; height: 26px; margin: 4px 6px 0; }
+.range2 .track { position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: var(--line); }
+.range2 .fill { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 2px; }
+.range2 input[type=range] { position: absolute; left: 0; width: 100%; top: 4px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.range2 input[type=range]::-webkit-slider-runnable-track { background: none; }
+.range2 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 16px; height: 16px; border-radius: 50%; background: var(--text); border: 2px solid var(--accent); cursor: pointer; }
+.range2 input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: var(--text); border: 2px solid var(--accent); cursor: pointer; }
+.row.between { justify-content: space-between; }
+.rel { display: inline-block; width: 14px; text-align: center; font-size: 11px; color: var(--muted); }
+.rel.pos { color: var(--good); } .rel.neg { color: var(--bad); }
+.check.hostile { color: var(--muted); }
+h2.sub { margin-top: 10px; }
+.best { color: var(--warn); font-size: 12px; white-space: nowrap; }
+.row.nowrap { flex-wrap: nowrap; } .row.nowrap input { flex: 1; min-width: 0; }
+/* Single-ship mode: the hull filters do not apply, so they are dimmed. */
+body.focus #sizes, body.focus #price-basis, body.focus .range2, body.focus #best-only { opacity: .45; }
+
+/* Settings dialog */
+.gear { margin-left: auto; }
+#settings { width: min(640px, 94vw); max-height: 90vh; overflow: auto; }
+#settings section { margin: 14px 0; padding-top: 10px; border-top: 1px solid var(--line); }
+#settings h2.title { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+#settings h3 { font-size: 12px; margin: 10px 0 4px; color: var(--muted); font-weight: 600; }
+#settings select { min-width: 0; flex: 1; }
+#settings .grid2 { display: grid; grid-template-columns: 1fr 90px; gap: 4px 10px; align-items: center; font-size: 13px; }
+#settings input[type=number] { width: 70px; }
+table.compact th, table.compact td { padding: 3px 6px; text-align: left; font-size: 13px; }
+.warn { color: var(--warn); }
+body.hide-ids .id { display: none; }
+
+/* Sort chain */
+#sortbar { margin: 4px 0 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+#sortbar .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; cursor: pointer; user-select: none; }
+#sortbar .chip button { border: 0; background: none; padding: 0 0 0 2px; color: var(--muted); }
+th sup { color: var(--accent); margin-left: 1px; }
+
+/* Grouped headers: a group row above the column row, both sticky. */
+thead tr.groups th { top: 0; height: 24px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); font-weight: 600; text-align: center; cursor: default; border-bottom: 0; }
+thead tr.cols th { top: 24px; }
+th.grp:not(:first-child), th.gstart, td.gstart { border-left: 1px solid var(--line); }
+
+/* Sold by: factions that will sell you the hull stand out; the rest say why not in a tooltip. */
+.seller { font-size: 12px; white-space: nowrap; }
+.seller.ok { color: var(--good); font-weight: 600; }
+.seller.ok.unsel { font-weight: 400; text-decoration: underline dotted; }
+.seller.no { color: var(--muted); }
+td.sellers { white-space: normal; min-width: 280px; max-width: 420px; }
+
+/* Abbreviated faction names: the full name is in the tooltip. */
+.abbr, .seller[title*=" — "] { cursor: help; }
+
+/* Comparison */
+#comparebar { margin: 0 0 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+#comparebar .chip { background: var(--panel-2); border: 1px solid var(--accent-dim); border-radius: 10px; padding: 1px 8px; }
+#comparebar .chip button { border: 0; background: none; padding: 0 0 0 2px; color: var(--muted); }
+td.cmp { width: 24px; text-align: center; }
+.cmpbtn { padding: 0 5px; line-height: 16px; font-size: 12px; color: var(--muted); }
+.cmpbtn.on { color: var(--accent); border-color: var(--accent); }
+#compare-dialog { width: min(1400px, 96vw); max-height: 92vh; overflow: auto; }
+#compare-dialog h2.title { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.compare-wrap { overflow-x: auto; }
+#compare-table { border-collapse: collapse; font-size: 13px; }
+#compare-table th, #compare-table td { padding: 4px 10px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; white-space: nowrap; }
+#compare-table tbody th { text-align: left; font-weight: 400; color: var(--muted); }
+#compare-table th.design { text-align: left; min-width: 200px; position: sticky; top: 0; background: var(--panel); }
+#compare-table th.design button { padding: 0 5px; font-size: 11px; }
+#compare-table tr.cgroup th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-top: 12px; font-weight: 600; }
+#compare-table td.best-v { font-weight: 700; color: var(--good); }
+#compare-table td.parts { text-align: left; white-space: normal; font-size: 12px; }
+.delta { font-size: 11px; font-weight: 400; } .delta.pos { color: var(--good); } .delta.neg { color: var(--bad); }
+#compare-table th.design { white-space: normal; max-width: 280px; }
+#compare-table th.design .row { flex-wrap: nowrap; gap: 6px; } #compare-table th.design .row > span { flex: none; }
+/* Design headers: long faction lists wrap inside a capped block instead of widening the column. */
+#compare-table th.design .from { max-width: 240px; white-space: normal; }
+#compare-table .more { text-decoration: underline dotted; cursor: help; }
+
+/* Compare, compact: the table is as wide as its content (the global table rule stretches it to
+ * the dialog), the dialog shrinks to the table, values and deltas sit in fixed lanes so the
+ * numbers of one design line up, and rows are striped so the eye can follow a row across. */
+#compare-dialog { width: fit-content; min-width: min(520px, 96vw); max-width: 96vw; }
+#compare-table { width: auto; }
+#compare-table tbody th { position: static; cursor: default; padding-right: 18px; }
+#compare-table th.design { min-width: 150px; max-width: 220px; }
+#compare-table td .v { display: inline-block; min-width: 56px; text-align: right; }
+#compare-table td .delta { display: inline-block; width: 46px; text-align: right; }
+#compare-table tbody tr:not(.cgroup):nth-child(even) { background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+#compare-table tbody tr:not(.cgroup):hover { background: var(--accent-dim); }
+#compare-table td.best-v .v { font-weight: 700; color: var(--good); }
+#compare-table td.best-v { font-weight: 400; color: inherit; }
+#compare-table tbody th { background: transparent; }
+
+/* Rating profile dialog */
+#profile-dialog { width: min(960px, 96vw); max-height: 92vh; overflow: auto; }
+#profile-dialog h2.title { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+#profile-dialog section { margin: 14px 0; padding-top: 10px; border-top: 1px solid var(--line); }
+#profile-dialog h3 { font-size: 12px; margin: 12px 0 4px; color: var(--muted); font-weight: 600; }
+#profile-dialog textarea { width: 100%; box-sizing: border-box; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+#profile-dialog .grid2.wide { display: grid; grid-template-columns: 70px 1fr; gap: 4px 10px; align-items: start; font-size: 13px; }
+#profile-dialog .row label.check { margin-right: 8px; }
+#profile-dialog .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+#profile-dialog .chip button { border: 0; background: none; padding: 0 0 0 2px; color: var(--muted); }
+#pd-ban-in { flex: 1; min-width: 0; }
+.pd-scroll { overflow-x: auto; }
+table.pd-metrics { width: auto; }
+table.pd-metrics th { position: static; cursor: default; }
+table.pd-metrics input[type=number] { width: 72px; }
+table.pd-metrics tr.off td:first-child { color: var(--muted); }
+table.pd-metrics td:first-child { text-align: left; }
+#profile-pick { flex: 1; min-width: 0; }
+/* Score breakdown */
+table.why td:first-child { color: var(--muted); text-align: left; }
+table.why td:nth-child(2) { width: 45%; }
+.pts { display: flex; height: 8px; border-radius: 3px; overflow: hidden; background: transparent; }
+.pts .got { background: var(--accent); } .pts .lost { background: var(--accent-dim); }
+/* Text inputs (profile author, ban search) like the other fields; disabled buttons look it. */
+input:not([type]), input[type=text] { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; }
+button:disabled { opacity: .45; cursor: default; } button:disabled:hover { border-color: var(--line); }
+#detail h2 { margin-top: 14px; }
+
+/* Setup (game / profile / language) and the first-run screen */
+.setup { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 8px 10px; align-items: start; font-size: 13px; margin: 6px 0; }
+.setup > span { color: var(--muted); padding-top: 3px; }
+.setup select, .setup input { max-width: 100%; } .setup select { width: 100%; }
+.setup .row.nowrap input { flex: 1; min-width: 0; }
+main.firstrun-main { display: block; overflow: auto; }
+section.firstrun { max-width: 760px; margin: 32px auto; padding: 20px 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+section.firstrun h2.title { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 10px; }
+section.firstrun pre { background: var(--panel-2); padding: 8px 10px; border-radius: 4px; }
+button.primary { background: var(--accent-dim); border-color: var(--accent); font-weight: 600; }
