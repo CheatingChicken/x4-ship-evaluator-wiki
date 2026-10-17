@@ -55,6 +55,7 @@
     icons: "https://swi.siifr.net/ships/icons/",
     // Names for build-cost wares. Energy cells, hull parts, ship supplies and rhydonium as the wiki
     // shows them; the rest are the base game's names (SWI may name some differently).
+    shortFactions: true,     // sellers in tables by their in-game short names (IMP), full name on hover
     wareNames: {
       energycells: "Energy Cells", hullparts: "Durasteel Plates", shipsupplies: "Ship Supplies", rhydoniumcell: "Rhydonium Core",
       computronicsubstrate: "Computronic Substrate", metallicmicrolattice: "Metallic Microlattice", weaponcomponents: "Weapon Components",
@@ -103,13 +104,18 @@
   function ctxHelpers(c) {
     const cfg = c.cfg, D = c.D, det = c.det;
     const fname = (f) => (D.factions[f] || f);
-    // up to three sellers, then "+N more" with the rest on hover (long lists made rows very tall)
-    const sellers = (owners) => {
+    // Sellers in a table cell: the in-game short names (IMP, NRL) with the full name on hover
+    // (cfg.shortFactions), up to four, else three and "+N more" with the rest on hover. full: the
+    // full names, for the infobox, which has the room.
+    const shortName = (f) => (cfg.shortFactions && (D.faction_short || {})[f]) || fname(f);
+    const sellers = (owners, full) => {
       if (!owners || !owners.length) return `<span class="muted">no seller listed</span>`;
-      const names = owners.map(fname).sort((a, b) => a.localeCompare(b));
-      const shown = names.length > 3 ? names.slice(0, 2) : names;
-      return esc(shown.join(", ")) + (names.length > shown.length
-        ? ` <span class="more-chip" title="${esc(names.slice(shown.length).join(", "))}">+${names.length - shown.length} more</span>` : "");
+      const list = owners.slice().sort((a, b) => fname(a).localeCompare(fname(b)));
+      const one = (f) => (full || shortName(f) === fname(f) ? esc(fname(f)) : `<span title="${esc(fname(f))}">${esc(shortName(f))}</span>`);
+      if (full) return list.map(one).join(", ");
+      const shown = list.length > 4 ? list.slice(0, 3) : list;
+      return shown.map(one).join(", ") + (list.length > shown.length
+        ? ` <span class="more-chip" title="${esc(list.slice(shown.length).map(fname).join(", "))}">+${list.length - shown.length} more</span>` : "");
     };
     const licence = (l) => (l ? esc(cfg.licences[l] || l) : "None");
     const build = (b) => (b && b.wares && b.wares.length
@@ -178,7 +184,7 @@
       ${head("Build cost")}${(d.build && d.build.wares || []).map((w) => row(esc(c.cfg.wareNames[w.ware] || w.ware), num(w.amount, 0))).join("") || row("—", "")}
       ${d.build && d.build.time ? row("Build time", num(d.build.time, 0) + " s") : ""}
       ${head("Credit cost")}${row("Minimum", cr(price.min))}${row("Average", cr(price.avg || s.price))}${row("Maximum", cr(price.max))}
-      ${head("Sold by")}<tr><td colspan="2" class="sellers">${h.sellers(s.owners)}</td></tr>
+      ${head("Sold by")}<tr><td colspan="2" class="sellers">${h.sellers(s.owners, true)}</td></tr>
     </table></aside>`;
   }
 
@@ -220,11 +226,27 @@
 
   // A heading (optional) and a table the search box filters; hidden as a whole when nothing in it matches.
   const filterGroup = (headingHtml, tableHtml) => `<div class="filtergroup">${headingHtml}${tableHtml}</div>`;
-  const groupTitle = (g) => `${g.count} × ${esc((g.size || "").toUpperCase())} ${esc(g.kind)} slot${g.count === 1 ? "" : "s"}${g.mining ? " (mining)" : ""}`;
+  const groupTitle = (g) => `${g.count} × ${esc((g.size || "").toUpperCase())} ${esc(g.kind)} slot${g.count === 1 ? "" : "s"}${g.mining ? " (mining)" : ""}` +
+    (g.merged > 1 ? ` <span class="small muted" title="Slot groups whose tags differ but which take exactly the same parts (see Slot layout)">· ${g.merged} slot groups</span>` : "");
+  // Slot groups that take exactly the same parts, as one table: their tags differ (the slot layout
+  // shows them apart) but not in anything a part asks for. Slot counts add up.
+  function sameOptions(groups) {
+    const out = new Map();
+    for (const g of groups) {
+      const key = g.cands.join(",");
+      const m = out.get(key);
+      if (!m) { out.set(key, Object.assign({}, g, { merged: 1 })); continue; }
+      m.count += g.count;
+      m.merged++;
+      m.mining = m.mining || g.mining;
+      if ((m.size || "") !== (g.size || "")) m.size = [m.size, g.size].filter(Boolean).join("/");
+    }
+    return [...out.values()];
+  }
   function perGroup(c, s, kind, cols, sortKey) {
-    const groups = s.groups.filter((g) => g.kind === kind);
+    const groups = sameOptions(s.groups.filter((g) => g.kind === kind));
     if (!groups.length) return `<p class="muted">This hull has no ${kind} slots.</p>`;
-    return groups.map((g) => filterGroup(`<h3>${groupTitle(g)} <span class="muted"></span></h3>`,
+    return groups.map((g) => filterGroup(`<h3>${groupTitle(g)} <span class="muted hits"></span></h3>`,
       table(cols, withDetail(c, g.cands.map((i) => c.D.parts[i])).sort((a, b) => sortKey(b) - sortKey(a)), "filterable"))).join("");
   }
   function shields(c, s, h) {
@@ -353,7 +375,7 @@
   // ships grouped by size: a heading and a table per size (the wiki's full list layout)
   const bySize = (c, ships, h) => HULLS.map((z) => {
     const list = ships.filter((s) => hullOf(c, s) === z);
-    return list.length ? filterGroup(`<h2 id="${z}">${z.toUpperCase()} <span class="muted">${list.length}</span></h2>`, shipTable(c, list, h)) : "";
+    return list.length ? filterGroup(`<h2 id="${z}">${z.toUpperCase()} <span class="muted hits">${list.length}</span></h2>`, shipTable(c, list, h)) : "";
   }).join("");
   // The search box over the page's filterable tables (wired up by wireSearch in the browser).
   // noun: what a row is, for the hit count ("12 of 69 ships")
@@ -387,7 +409,8 @@
           const n = c.D.ships.filter((s) => s.origin === m).length;
           return [listPath(m), esc(c.mods[m]), n || "not switched on"];
         });
-        html += `<section><h2>Ships by faction</h2>${linkList(sellers.map(([f, n]) => [listPath("swi", factionCode(c, f)), esc(c.D.factions[f] || f), n]))}</section>` +
+        const short = (f) => ((c.D.faction_short || {})[f] ? ` <span class="muted small">${esc(c.D.faction_short[f])}</span>` : "");
+        html += `<section><h2>Ships by faction</h2>${linkList(sellers.map(([f, n]) => [listPath("swi", factionCode(c, f)), esc(c.D.factions[f] || f) + short(f), n]))}</section>` +
           `<section><h2>Submods</h2>${linkList(mods)}</section>`;
       }
       return { title: modName ? prefix : "Vessel Catalogue", html };
@@ -456,7 +479,7 @@
       root.querySelectorAll(".filtergroup").forEach((g) => {
         const hits = g.querySelectorAll("tbody tr:not([hidden])").length, all = g.querySelectorAll("tbody tr").length;
         g.hidden = !hits;
-        const label = g.querySelector("h2 .muted, h3 .muted");
+        const label = g.querySelector(".hits");   // the hit count, not the slot-group note
         if (label) label.textContent = words.length ? `${hits} of ${all}` : (g.querySelector("h2") ? String(all) : "");
       });
       root.querySelectorAll("section").forEach((sec) => {

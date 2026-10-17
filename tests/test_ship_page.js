@@ -67,6 +67,20 @@ ok("routes");
   assert.ok(P.renderShip(c, eclipse).includes('class="modchip" title="Dreadnaughts'), "DABC chip");
   ok("mod chips");
 
+  // option tables: slot groups taking exactly the same parts share one table, slot counts added up
+  for (const sh of D.ships) {
+    const html = P.renderShip(c, sh);
+    for (const kind of ["shield", "weapon", "turret"]) {
+      const sets = new Set(sh.groups.filter((g) => g.kind === kind).map((g) => g.cands.join(",")));
+      const heads = (html.match(new RegExp(`<h3>[0-9]+ × [A-Z/]* ${kind} slots?`, "g")) || []).length;
+      assert.strictEqual(heads, sets.size, sh.id + " " + kind + " tables");
+    }
+  }
+  // sellers by short name in tables, full name on hover; the infobox keeps full names
+  assert.ok(page.includes('<span title="New Republic">NRL</span>'), "short seller names");
+  assert.ok(/class="sellers">[^<]*Incom Corporation/.test(page), "infobox: full names");
+  ok("merged option groups, short faction names");
+
   // list pages
   const rows = (page) => (page.html.match(/<tr>/g) || []).length - (page.html.match(/<thead>/g) || []).length;
   assert.strictEqual(rows(P.renderIndex(c, P.route("submods/rsp/ships/full-list"))), D.ships.filter((s) => s.origin === "rsp").length, "RSP full list");
