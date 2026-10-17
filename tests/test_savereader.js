@@ -46,7 +46,7 @@ async function* textChunks(file) {
   const mb = fs.statSync(save).size / 1e6;
   for (const k of ["licences", "blueprints", "relations", "galaxy", "access"]) assert.deepStrictEqual(got[k], ref[k], k + " differs from import_save.py");
   for (const k of ["file", "name", "game_version", "start", "player", "money"]) assert.deepStrictEqual(got.save[k], ref.save[k], "save." + k + " differs");
-  console.log("ok  %s (%s MB on disk) read in %d ms: %d licence types, %d blueprints, %d relations, %d factions with stations, %d access entries — identical to import_save.py",
+  console.log("ok  %s (%s MB on disk) read in %d ms: %d licence types, %d blueprints, %d relations, %d factions with stations, %d access entries, identical to import_save.py",
     path.basename(save), mb.toFixed(0), ms, Object.keys(got.licences).length, got.blueprints.length,
     Object.keys(got.relations).length, Object.keys(got.galaxy).length, Object.keys(got.access).length);
 })().catch((e) => { console.error(e.message); process.exit(1); });

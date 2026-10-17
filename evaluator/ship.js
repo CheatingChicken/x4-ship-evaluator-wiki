@@ -204,7 +204,7 @@
     const items = Object.entries(s.engines).map(([i, row]) => Object.assign({ row }, withDetail(c, [c.D.parts[+i]])[0]))
       .sort((a, b) => b.row.TravelSpeed - a.row.TravelSpeed);
     const n = items.length ? items[0].row.engines : 0;
-    return section("engines", "Engine options", `<p class="muted small">Values for this hull with ${n} engine${n === 1 ? "" : "s"} of the kind fitted. Speeds and accelerations are the game's own figures (checked with an in-game probe); boost recharge is 100 ÷ the engine's recharge time, as on the wiki.</p>` + filterGroup("", table([
+    return section("engines", "Engine options", `<p class="muted small">Values for this hull with ${n} of the engine fitted. Speeds and accelerations match the game's own figures, which we checked in the game. Boost recharge is 100 ÷ the engine's recharge time, the same calculation the wiki uses.</p>` + filterGroup("", table([
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Speed<br>m/s", (p) => num(p.row.ForwardSpeed)], ["Accel.<br>m/s²", (p) => num(p.row.ForwardAcceleration)],
       ["Boost<br>m/s", (p) => num(p.row.BoostSpeed)], ["Boost acc.<br>m/s²", (p) => num(p.row.BoostAcceleration)],
@@ -217,7 +217,7 @@
   function thrusters(c, s, h) {
     const items = Object.entries(s.thrusters).map(([i, row]) => Object.assign({ row }, withDetail(c, [c.D.parts[+i]])[0]))
       .sort((a, b) => b.row.YawSpeed - a.row.YawSpeed);
-    return section("thrusters", "Thruster options", `<p class="muted small">Thrusters are the base game's (SWI uses the stock ones). Turn rates for this hull, in degrees per second.</p>` + filterGroup("", table([
+    return section("thrusters", "Thruster options", `<p class="muted small">SWI uses the base game's thrusters. Turn rates are for this hull, in degrees per second.</p>` + filterGroup("", table([
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Yaw<br>°/s", (p) => num(p.row.YawSpeed * DEG)], ["Pitch<br>°/s", (p) => num(p.row.PitchSpeed * DEG)], ["Roll<br>°/s", (p) => num(p.row.RollSpeed * DEG)],
       ["Strafe<br>m/s", (p) => num(p.row.HorizontalStrafeSpeed)], ["Strafe acc.<br>m/s²", (p) => num(p.row.HorizontalStrafeAcceleration)],
@@ -227,7 +227,7 @@
   // A heading (optional) and a table the search box filters; hidden as a whole when nothing in it matches.
   const filterGroup = (headingHtml, tableHtml) => `<div class="filtergroup">${headingHtml}${tableHtml}</div>`;
   const groupTitle = (g) => `${g.count} × ${esc((g.size || "").toUpperCase())} ${esc(g.kind)} slot${g.count === 1 ? "" : "s"}${g.mining ? " (mining)" : ""}` +
-    (g.merged > 1 ? ` <span class="small muted" title="Slot groups whose tags differ but which take exactly the same parts (see Slot layout)">· ${g.merged} slot groups</span>` : "");
+    (g.merged > 1 ? ` <span class="small muted" title="These slot groups have different tags but accept exactly the same parts. The slot layout lists them separately.">· ${g.merged} slot groups</span>` : "");
   // Slot groups that take exactly the same parts, as one table: their tags differ (the slot layout
   // shows them apart) but not in anything a part asks for. Slot counts add up.
   function sameOptions(groups) {
@@ -334,7 +334,7 @@
       `<a href="./${pathOf(s.origin, (d.page || {}).hull)}">${esc(((d.page || {}).hull || s.size).toUpperCase())}</a> › ${esc(s.name)}</nav>`;
     const main = [
       on.description && d.description ? section("description", "Description", d.description.split("\n").map((p) => `<p>${esc(p)}</p>`).join("")) : "",
-      on.loadouts ? section("loadouts", "Best loadouts", `<p class="muted small">The evaluator's best fit per role with the default rating profile, any seller, no save.</p><div id="loadouts">${loadoutHtml(c, s, c.loadouts, h)}</div>`) : "",
+      on.loadouts ? section("loadouts", "Best loadouts", `<p class="muted small">The evaluator's best fit for each role, using the default rating profile, every seller and no save.</p><div id="loadouts">${loadoutHtml(c, s, c.loadouts, h)}</div>`) : "",
       on.slotLayout ? slotLayout(c, s, d) : "",
       on.equipmentFilter && (on.engines || on.thrusters || on.shields || on.weapons || on.turrets)
         ? searchBox("Filter equipment by name, use, seller or mod…", "parts") : "",
@@ -399,7 +399,7 @@
     const prefix = modName ? modName + " ships" : "Ships";
     if (r.list === "hub") {
       const hulls = HULLS.map((z) => [listPath(r.mod, z), z.toUpperCase() + " ships", pool.filter((s) => hullOf(c, s) === z).length]).filter((x) => x[2]);
-      let html = crumbs() + head(modName ? prefix : "Vessel Catalogue", "", modName ? "" : "Where the ships of your dreams in the SWI galaxy can be found") +
+      let html = crumbs() + head(modName ? prefix : "Vessel Catalogue", "", modName ? "" : "Every ship in SW Interworlds and its submods, by size and by faction.") +
         `<section><h2>Ship lists</h2>${linkList([[listPath(r.mod, "full-list"), "Full list", pool.length]])}</section>` +
         `<section><h2>Ships by hull</h2>${linkList(hulls)}</section>`;
       if (r.mod === "swi") {

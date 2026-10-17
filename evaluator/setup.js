@@ -69,8 +69,8 @@
       return;
     }
     main.innerHTML = `<section class="firstrun"><h2 class="title">First, read your game</h2>
-      <p>The evaluator builds its data from your own X4 installation and the mods enabled in your profile.
-        Nothing is changed in the game. Check what was found, then build.</p>
+      <p>The evaluator reads your X4 installation and the mods enabled in your profile.
+        It does not change any game files. Check the folders below, then click Build from my game.</p>
       <div id="fr-setup"></div>
       <div class="row"><button type="button" id="fr-build" class="primary">Build from my game</button>
         <label class="check small"><input type="checkbox" id="fr-all"> include disabled mods</label></div>
@@ -87,7 +87,7 @@
     build.onclick = async () => {
       build.disabled = true;
       status.className = "small";
-      status.textContent = "Reading the game and your mods… this takes about 30 seconds.";
+      status.textContent = "Reading the game and your mods. This takes about 30 seconds.";
       try {
         await api("/__export", { all: document.querySelector("#fr-all").checked });
         status.textContent = "Done. Loading…";

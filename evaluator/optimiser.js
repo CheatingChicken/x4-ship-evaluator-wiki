@@ -93,13 +93,13 @@
   // is permanent hull damage.
   const THREATS = {
     unprotected: { label: "Unprotected", require: {},                             defence: 0,
-                   tip: "No requirement at all: empty slots allowed, defence does not count. For throwaway hulls." },
+                   tip: "No requirements. Slots may stay empty and defence is ignored. Use this for expendable ships." },
     safe:        { label: "Safe",        require: { shield: true },               defence: 1,
-                   tip: "Quiet space: every shield slot filled (cheapest that will do), turrets optional." },
+                   tip: "For quiet space. Every shield slot gets at least the cheapest shield. Turrets are optional." },
     contested:   { label: "Contested",   require: { shield: true },               defence: 3,
-                   tip: "Pirates about: every shield slot filled, defence counts." },
+                   tip: "For space with pirates. Every shield slot is filled and defence counts toward the score." },
     dangerous:   { label: "Dangerous",   require: { shield: true, turret: true, weapon: true }, defence: 5,
-                   tip: "War zone: every shield, turret and weapon slot filled, defence counts heavily." },
+                   tip: "For war zones. Every shield, turret and weapon slot is filled and defence counts heavily." },
   };
 
   // Default weights per role. A metric at weight 0 still gets its table column and slider; it only

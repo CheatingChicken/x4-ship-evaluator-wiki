@@ -257,11 +257,11 @@
       const sel = st.threats[st.role];
       opts.innerHTML = `<div class="seg" id="cargo-type"></div><h2 class="sub">Threat profiles shown</h2>
         <div class="chips" id="threats">` + Object.entries(O.THREATS).map(([k, t]) =>
-          `<button data-v="${k}" class="${sel.includes(k) ? "on" : ""}" title="${threatTip(t)}">${t.label}</button>`).join("") +
-        `</div><p class="muted small">Each profile is its own row per ship. Hover a profile for its rules.</p>
+          `<button data-v="${k}" class="${sel.includes(k) ? "on" : ""}" title="${threatTip(t, k)}">${t.label}</button>`).join("") +
+        `</div><p class="muted small">Each selected profile adds its own row for every ship. Hover over a profile to see its rules.</p>
         <h2 class="sub">Trip length</h2><div class="seg" id="trip"></div>
-        <p class="muted small">One leg from standstill: charge, turn onto course, accelerate, cruise, slow down.
-        Short hops favour acceleration and turning, long hauls top speed.</p>`;
+        <p class="muted small">Time for one leg from a standstill, including drive charge, turning onto course, acceleration, cruising and braking.
+        On short legs, acceleration and turning matter most. On long legs, top speed matters most.</p>`;
       const kms = [...new Set([10, 25, 50, 100, 250, PF.trip.km])].sort((a, b) => a - b);
       seg($("#trip"), kms.map((k) => [String(k), k + " km"]), String(PF.trip.km), (v) => { PF.trip.km = +v; commitProfile(); });
       seg($("#cargo-type"), types, st.cargoType[st.role], (v) => { st.cargoType[st.role] = v; changed(true); });
@@ -404,9 +404,14 @@
   let autoPick = false;
 
   // Built from the live configuration, so an edited profile is described as it now is.
-  function threatTip(t) {
-    const req = Object.entries(t.require).filter(([, on]) => on).map(([k]) => k + "s");
-    return (req.length ? "Every " + req.join(", ") + " slot filled. " : "No slot required. ") + "Defence weight " + t.defence + ".";
+  // A threat profile's tooltip: its written description while the rating profile keeps the shipped
+  // rules for it, else a sentence built from the rules the profile sets.
+  function threatTip(t, k) {
+    const d = O.DEFAULTS.threats[k], kinds = ["shield", "turret", "weapon"];
+    if (t.tip && d && d.defence === t.defence && kinds.every((x) => !!(d.require || {})[x] === !!t.require[x])) return t.tip;
+    const req = kinds.filter((x) => t.require[x]);
+    const list = req.length > 1 ? req.slice(0, -1).join(", ") + " and " + req[req.length - 1] : req[0];
+    return (req.length ? `Every ${list} slot is filled.` : "Slots may stay empty.") + ` Defence weight ${t.defence}.`;
   }
 
   // Table density: vertical padding of the result rows (style.css --row-pad).
@@ -734,7 +739,7 @@
     ].concat(hasThreats() ? [{ key: "threat", label: "Threat", group: "Ship", cls: "txt", get: (r) => threatLabel(r),
         fmt: (v, r) => `<span title="${memberScores(r)}">${v}</span>` }] : [], [
       { key: "source", label: "Equipment from", group: "Ship", cls: "txt", get: (r) => sourceLabel(r), fmt: (v, r) =>
-        `${sourceCellHtml(r)}${r.mixedToo && v !== "Mixed" ? ` <span class="best" title="The mixed search over every selected shipyard found this same loadout: no combination does better">★</span>` : ""}` },
+        `${sourceCellHtml(r)}${r.mixedToo && v !== "Mixed" ? ` <span class="best" title="A search across all selected shipyards found this same loadout, so no other combination beats it.">★</span>` : ""}` },
       { key: "hull", label: "Hull price", group: "Price", get: (r) => r.ship.price, fmt: money },
       { key: "fitted", label: "Fitted", group: "Price", get: (r) => r.metrics.price, fmt: money },
     ]).concat(metricCols, [{ key: "sellers", label: "Sold by", group: "Market", cls: "txt sellers",
@@ -921,7 +926,7 @@
     el.innerHTML = `<div class="dhead"><h3>${shipLabel(s)}</h3><button type="button" id="detail-close" title="Close (Esc)" aria-label="Close">×</button></div>
       <div class="muted small">${[`<span class="id">${s.id}</span>`, (s.size.toUpperCase() + " " + (s.type || "")).trim(), s.race, s.origin, "licence " + (s.licence || "none")].filter(Boolean).join(" · ")}</div>
       <div class="muted small">Sold by: ${s.owners.map((f) => factionHtml(f)).join(", ")}</div>
-      <div class="small">${r.threats.length ? `<b>${threatLabel(r)}</b> · ` : ""}equipment from <b>${sourceHtml(r)}</b>${r.mixedToo && sourceLabel(r) !== "Mixed" ? " · ★ no mixed loadout beats it" : ""}</div>
+      <div class="small">${r.threats.length ? `<b>${threatLabel(r)}</b> · ` : ""}equipment from <b>${sourceHtml(r)}</b>${r.mixedToo && sourceLabel(r) !== "Mixed" ? " · ★ best across all shipyards" : ""}</div>
       ${r.threats.length > 1 ? `<div class="muted small">Score per profile: ${memberScores(r)}</div>` : ""}
       ${breakdownHtml(r)}
       <table class="figures"><tr class="grp"><th colspan="2">Overview</th></tr><tr><td>Score</td><td>${fmt(r.score, 1)}</td></tr>
@@ -1183,9 +1188,10 @@
     $("#pd-role").innerHTML = `
       <h3>Metrics</h3>
       <div class="pd-scroll"><table class="compact pd-metrics"><tr><th>Metric</th><th>Weight</th><th>Curve</th><th>Target</th><th>Measured against</th><th>Fixed</th><th>Min</th><th>Max</th></tr>${rows}</table></div>
-      <p class="muted small">Weight 0–5; blank = no column. <b>Curve</b>: linear counts every bit equally; sqrt and log reward the first gains most;
-        target counts up to the target value and nothing beyond. <b>Measured against</b>: the best ship in the current list, the best of the same size
-        (fair to small ships), or a fixed number. <b>Min/Max</b>: fits outside the range are dropped.</p>
+      <p class="muted small">Weight runs from 0 to 5; leave it blank to hide the column. <b>Curve</b> sets how a value turns into points. Linear counts every bit
+        the same, sqrt and log give the most for the first gains, and target counts up to the target value only. <b>Measured against</b>
+        sets what scores 100%: the best ship in the list, the best ship of the same size, or a fixed number. Same size keeps small ships
+        from being outscored by big ones. Fits outside <b>Min</b> and <b>Max</b> are left out.</p>
       <h3>Slot rules</h3>
       <div class="row">Always fill: ${P.KINDS.map((k) => `<label class="check"><input type="checkbox" data-req="${k}" ${R.slots.require[k] ? "checked" : ""}> ${k}s</label>`).join("")}</div>
       <div class="row">Never fit: ${Object.entries(P.USES).map(([u, l]) => `<label class="check" title="${esc(l)}"><input type="checkbox" data-ex="${u}" ${R.slots.exclude.includes(u) ? "checked" : ""}> ${u}</label>`).join("")}</div>
@@ -1256,7 +1262,7 @@
       useProfile("user:" + id, profile);
       renderProfileDialog();
       msg.className = "small";
-      msg.innerHTML = `Imported “${esc(name)}”${profile.author ? " by " + esc(profile.author) : ""} and made it active.` +
+      msg.innerHTML = `Imported "${esc(name)}"${profile.author ? " by " + esc(profile.author) : ""} and switched to it.` +
         (warnings.length ? `<br><span class="warn">${warnings.map(esc).join("<br>")}</span>` : "");
       $("#pd-import-text").value = "";
     } catch (e) {
@@ -1310,7 +1316,7 @@
     };
     $("#pd-delete").onclick = () => {
       const s = sourceOf(); if (s.kind !== "user") return;
-      if (!confirm("Delete the profile “" + PF.name + "”? Export it first if you may want it back.")) return;
+      if (!confirm("Delete the profile \"" + PF.name + "\"? Export it first if you might need it again.")) return;
       delete st.profiles[s.id];
       useProfile("preset:default", presetById("default").profile);
       renderProfileDialog();
