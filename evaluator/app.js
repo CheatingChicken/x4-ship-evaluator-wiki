@@ -81,8 +81,9 @@
   /* VANILLA FACTIONS. Under SW Interworlds the base game's factions still own wares but play no
    * part in the galaxy, so in SWI data they are hidden everywhere (switchable in Settings →
    * Display). A faction counts as vanilla when its id AND its name are the base game's: ids SWI
-   * reused under a new name (khaak as the Yuuzhan Vong, xenon as "Unknown Threat") stay. */
-  const VANILLA = { player: "Player", civilian: "Civilian", ownerless: "ownerless", alliance: "Alliance of the Word",
+   * reused under a new name (khaak as the Yuuzhan Vong, xenon as "Unknown Threat") stay. The
+   * player's own faction is never vanilla: it exists under every mod. */
+  const VANILLA = { civilian: "Civilian", ownerless: "ownerless", alliance: "Alliance of the Word",
     antigone: "Antigone Republic", argon: "Argon Federation", boron: "Queendom of Boron", buccaneers: "Duke's Buccaneers",
     court: "Court of Curbs", fallensplit: "Fallen Families", freesplit: "Free Families", hatikvah: "Hatikvah Free League",
     holyorder: "Holy Order of the Pontifex", holyorderfanatic: "Holy Order Faithful", kaori: "Quettanauts",
