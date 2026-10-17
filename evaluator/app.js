@@ -228,12 +228,6 @@
     const m = D.meta || {};
     const from = m.source === "wiki" ? "SWI wiki" + ((m.mods || []).length > 1 ? " + " + m.mods.filter((x) => x !== "swi").join(", ").toUpperCase() : "") : "X4 " + (m.game_version || "?");
     b.push(`<span class="badge">${from} · ${D.ships.length} ships · ${D.parts.length} parts · data ${String(m.generated || "").slice(0, 10)}</span>`);
-    const cal = D.calibration;
-    const def = D.calibration_default;
-    // Calibration: a badge only when the player's own probe calibrated the data, or when there is no
-    // calibration at all (a warning). The usual case, the shipped default calibration, needs none.
-    if (cal) b.push(`<span class="badge good" title="Movement and weapon figures checked against your own game's statistics">calibrated by in-game probe</span>`);
-    else if (!def) b.push(`<span class="badge warn" title="Speeds, turn rates and DPS are formula values. Run the in-game probe (make_probe.py) to calibrate them.">uncalibrated formulas</span>`);
     b.push(PL ? `<span class="badge" title="${PL.save.file}${PL.save.loaded === "browser" ? " (loaded in this browser)" : ""}">save: ${PL.save.player || ""}, ${PL.save.modified ? PL.save.modified.slice(0, 16).replace("T", " ") : ""}</span>`
       : `<span class="badge warn" title="Settings → Save file: load a save so the ranking knows your licences, reputation and blueprints">no save loaded</span>`);
     $("#status").innerHTML = b.join("");
