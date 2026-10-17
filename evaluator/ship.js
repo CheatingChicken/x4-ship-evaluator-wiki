@@ -73,8 +73,8 @@
 
   // ---------------------------------------------------------------- small helpers
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const num = (v, d) => (v == null || !isFinite(v) ? "—" : Number(v).toLocaleString("en", { maximumFractionDigits: d == null ? 1 : d }));
-  const cr = (v) => (v ? num(Math.round(v), 0) + " cr" : "—");
+  const num = (v, d) => (v == null || !isFinite(v) ? "–" : Number(v).toLocaleString("en", { maximumFractionDigits: d == null ? 1 : d }));
+  const cr = (v) => (v ? num(Math.round(v), 0) + " cr" : "–");
   const pathOf = (mod, hull, key) => (mod === "swi" ? "" : `submods/${mod}/`) + "ships" + (hull ? "/" + hull : "") + (key ? "/" + key : "");
 
   /* path below the site root ->
@@ -119,7 +119,7 @@
     };
     const licence = (l) => (l ? esc(cfg.licences[l] || l) : "None");
     const build = (b) => (b && b.wares && b.wares.length
-      ? b.wares.map((w) => `${num(w.amount, 0)} ${esc(cfg.wareNames[w.ware] || w.ware)}`).join(", ") : `<span class="muted">—</span>`);
+      ? b.wares.map((w) => `${num(w.amount, 0)} ${esc(cfg.wareNames[w.ware] || w.ware)}`).join(", ") : `<span class="muted">–</span>`);
     const modChip = (id) => (id && id !== "swi" && c.mods[id] ? ` <span class="modchip" title="${esc(c.mods[id])}">${esc(id.toUpperCase())}</span>` : "");
     const partMod = (p) => (p.kind === "thruster" ? "" : modChip((det.parts[p.id] || {}).mod));
     const partName = (p) => `${esc(p.name)}${p.mk && !/\bmk\s*\d/i.test(p.name) ? ` <span class="muted small">Mk${p.mk}</span>` : ""}${partMod(p)}`;
@@ -128,11 +128,11 @@
     const labels = c.labels || { types: {}, purposes: {} };
     const typeText = (t) => (t && labels.types[t] ? labels.types[t].name : t || "");
     const typeName = (t) => {
-      if (!t) return "—";
+      if (!t) return "–";
       const l = labels.types[t];
       return l ? `<span title="${esc((l.description ? l.description + "\n\n" : "") + t)}">${esc(l.name)}</span>` : esc(t);
     };
-    const purposeName = (x) => (x ? `<span title="${esc(x)}">${esc(labels.purposes[x] || x)}</span>` : "—");
+    const purposeName = (x) => (x ? `<span title="${esc(x)}">${esc(labels.purposes[x] || x)}</span>` : "–");
     return { fname, sellers, licence, build, modChip, partName, typeText, typeName, purposeName };
   }
 
@@ -181,7 +181,7 @@
       ${head("Hangar")}${row("S ships", num(hang.dock_s || 0, 0))}${row("M ships", num(hang.dock_m || 0, 0))}
       ${head("Capacity")}${row("Crew", num(s.crew, 0))}${row("Units (drones)", num(s.drones, 0))}${row("Missiles", num(s.missiles, 0))}
       ${row("Deployables", num(d.deployables || 0, 0))}${row("Countermeasures", num(d.countermeasures || 0, 0))}
-      ${head("Build cost")}${(d.build && d.build.wares || []).map((w) => row(esc(c.cfg.wareNames[w.ware] || w.ware), num(w.amount, 0))).join("") || row("—", "")}
+      ${head("Build cost")}${(d.build && d.build.wares || []).map((w) => row(esc(c.cfg.wareNames[w.ware] || w.ware), num(w.amount, 0))).join("") || row("–", "")}
       ${d.build && d.build.time ? row("Build time", num(d.build.time, 0) + " s") : ""}
       ${head("Credit cost")}${row("Minimum", cr(price.min))}${row("Average", cr(price.avg || s.price))}${row("Maximum", cr(price.max))}
       ${head("Sold by")}<tr><td colspan="2" class="sellers">${h.sellers(s.owners, true)}</td></tr>
@@ -193,7 +193,7 @@
     const rows = s.groups.map((g, i) => ({ g, n: g.cands.length, tags: tags[i] || [] }));
     return section("slots", "Slot layout", table([
       ["Slot", (r) => esc(r.g.kind) + (r.g.mining ? ` <span class="muted small">(mining)</span>` : ""), { txt: true }],
-      ["Size", (r) => esc((r.g.size || "—").toUpperCase())],
+      ["Size", (r) => esc((r.g.size || "–").toUpperCase())],
       ["Count", (r) => num(r.g.count, 0)],
       ["Fitting parts", (r) => num(r.n, 0)],
       ["Slot tags", (r) => r.tags.map((t) => `<code>${esc(t)}</code>`).join(" "), { txt: true, title: "A part fits when all of its own connection tags are among these" }],
@@ -208,7 +208,7 @@
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Speed<br>m/s", (p) => num(p.row.ForwardSpeed)], ["Accel.<br>m/s²", (p) => num(p.row.ForwardAcceleration)],
       ["Boost<br>m/s", (p) => num(p.row.BoostSpeed)], ["Boost acc.<br>m/s²", (p) => num(p.row.BoostAcceleration)],
-      ["Boost for<br>s", (p) => num(p.row.BoostMaxDuration)], ["Boost recharge<br>%/s", (p) => (p.d.boostRecharge ? num(100 / p.d.boostRecharge, 2) : "—")],
+      ["Boost for<br>s", (p) => num(p.row.BoostMaxDuration)], ["Boost recharge<br>%/s", (p) => (p.d.boostRecharge ? num(100 / p.d.boostRecharge, 2) : "–")],
       ["Travel<br>m/s", (p) => num(p.row.TravelSpeed, 0)], ["Travel acc.<br>m/s²", (p) => num(p.row.TravelAcceleration)],
       ["Charge<br>s", (p) => num(p.row.TravelChargeTime)],
     ].concat(buyCols(h)), items, "filterable")));
@@ -436,7 +436,7 @@
     for (const tr of table.tBodies[0].rows) tr.classList.toggle("alt", !tr.hidden && i++ % 2 === 1);
   }
   // A click on a header sorts its table by that column, a second click reverses it. Text columns
-  // (class "txt") sort A-Z first, number columns largest first; cells without a number ("—") go last.
+  // (class "txt") sort A-Z first, number columns largest first; cells without a number ("–") go last.
   function sortable(table) {
     const ths = [...table.tHead.rows[0].cells];
     ths.forEach((th, col) => {

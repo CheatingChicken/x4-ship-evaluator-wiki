@@ -24,11 +24,11 @@
     }
     const game = s.game
       ? `${esc(s.game.path)} <span class="muted small">(${esc(s.game.source)}${s.game.version ? ", X4 " + esc(s.game.version) : ""})</span>`
-      : `<span class="warn">not found</span>${s.game_note ? ` <span class="small">— ${esc(s.game_note)}</span>` : ""}`;
+      : `<span class="warn">not found</span>${s.game_note ? ` <span class="small">(${esc(s.game_note)})</span>` : ""}`;
     const profiles = s.profiles || [];
     const profile = profiles.length
       ? `<select id="su-profile">${profiles.map((p) => `<option value="${esc(p.path)}" ${s.profile && s.profile.path === p.path ? "selected" : ""}>` +
-          `${esc(p.path)} — ${p.saves} save${p.saves === 1 ? "" : "s"}${p.newest_save ? ", newest " + esc(when(p.newest_save)) : ""}</option>`).join("")}</select>` +
+          `${esc(p.path)} (${p.saves} save${p.saves === 1 ? "" : "s"}${p.newest_save ? ", newest " + esc(when(p.newest_save)) : ""})</option>`).join("")}</select>` +
         (s.profile ? ` <span class="muted small">(${esc(s.profile.source)})</span>` : "")
       : `<span class="warn">none found</span> <span class="muted small">looked in ${esc((s.profile_roots || []).join("; "))}</span>`;
     el.innerHTML = `<div class="setup">
@@ -68,7 +68,7 @@
         <p>or start the local server, which can do it from here and import saves too:</p><pre>python serve.py --open</pre></section>`;
       return;
     }
-    main.innerHTML = `<section class="firstrun"><h2 class="title">Welcome — let's read your game</h2>
+    main.innerHTML = `<section class="firstrun"><h2 class="title">First, read your game</h2>
       <p>The evaluator builds its data from your own X4 installation and the mods enabled in your profile.
         Nothing is changed in the game. Check what was found, then build.</p>
       <div id="fr-setup"></div>

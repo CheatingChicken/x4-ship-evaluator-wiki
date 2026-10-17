@@ -206,7 +206,7 @@
   // on and one exists, with the full name (and any note) as tooltip; otherwise the full name.
   const factionShort = (f) => st.display.shortFactions && (D.faction_short || {})[f];
   const factionHtml = (f, note) => {
-    const short = factionShort(f), tip = [short ? factionName(f) : "", note || ""].filter(Boolean).join(" — ");
+    const short = factionShort(f), tip = [short ? factionName(f) : "", note || ""].filter(Boolean).join(" · ");
     return `<span${tip ? ` title="${tip}"` : ""}${short ? ' class="abbr"' : ""}>${short || factionName(f)}</span>`;
   };
 
@@ -373,7 +373,7 @@
   }
 
   // ---------------------------------------------------------------- single-ship mode
-  const shipOption = (x) => `${shipLabel(x)} — ${x.size.toUpperCase()} ${x.type || ""} (${x.id})`;
+  const shipOption = (x) => `${shipLabel(x)} · ${[x.size.toUpperCase(), x.type].filter(Boolean).join(" ")} (${x.id})`;
 
   function renderFocus() {
     $("#ship-list").innerHTML = D.ships.slice().sort((a, b) => shipLabel(a).localeCompare(shipLabel(b)))
@@ -452,7 +452,7 @@
   function jobLine(status) {
     const l = status.last;
     $("#job-status").textContent = status.job ? `Running: ${status.job}…`
-      : l ? `Last: ${l.job} ${l.ok ? "succeeded" : "FAILED"} at ${String(l.at || "").replace("T", " ")}${l.ok ? "" : " — " + (l.output || []).slice(-1)[0]}` : "";
+      : l ? `Last: ${l.job} ${l.ok ? "succeeded" : "FAILED"} at ${String(l.at || "").replace("T", " ")}${l.ok ? "" : ": " + (l.output || []).slice(-1)[0]}` : "";
   }
 
   async function runAction(path, body, label) {
@@ -478,7 +478,7 @@
     const sec = $("#savefile");
     if (!window.X4Save) { sec.hidden = true; return; }
     const edited = Object.keys(st.saveEdits.factions).length;
-    $("#savefile-current").textContent = PL ? `In use: ${PL.save.file} — ${PL.save.player || "?"}, ${String(PL.save.modified || "").replace("T", " ")}${PL.save.loaded === "browser" ? " (loaded in this browser)" : " (imported by the local server)"}` +
+    $("#savefile-current").textContent = PL ? `In use: ${PL.save.file} · ${PL.save.player || "?"}, ${String(PL.save.modified || "").replace("T", " ")}${PL.save.loaded === "browser" ? " (loaded in this browser)" : " (imported by the local server)"}` +
       (edited ? ` · ${edited} faction${edited === 1 ? "" : "s"} adjusted by hand` : "") : "No save loaded.";
     $("#savefile-forget").hidden = !(PL && PL.save.loaded === "browser");
     $("#savefile-adjust").hidden = !PL;
@@ -532,7 +532,7 @@
   function renderSaveData() {
     const lic = licenceTypes(), q = sdUi.q.trim().toLowerCase();
     const edits = st.saveEdits.factions;
-    $("#sd-info").textContent = `${PL.save.file} — ${PL.save.player || "?"} · ${Object.keys(edits).length} faction(s) adjusted`;
+    $("#sd-info").textContent = `${PL.save.file} · ${PL.save.player || "?"} · ${Object.keys(edits).length} faction(s) adjusted`;
     const ids = Object.keys(D.factions).filter((f) => !vanilla(f)).sort((a, b) => factionName(a).localeCompare(factionName(b)))
       .filter((f) => (!q || factionName(f).toLowerCase().includes(q) || f.includes(q)) && (!sdUi.only || edits[f]));
     $("#sd-table").innerHTML = `<thead><tr><th>Faction</th><th title="In-game scale -30 … +30">Relation</th><th>Docks</th>` +
@@ -645,11 +645,11 @@
       // in the tooltip; without a save, how many ships it sells.
       const [yard, yardTip] = g
         ? (g.ships.length ? [g.ships.join("/").toUpperCase(), "Shipyards build " + g.ships.join(", ").toUpperCase() + " ships" + (g.equipment ? "; sells equipment" : "")]
-          : g.equipment ? ["equip.", "Equipment dock only, no shipyard"] : ["—", "No shipyard or equipment dock"])
+          : g.equipment ? ["equip.", "Equipment dock only, no shipyard"] : ["–", "No shipyard or equipment dock"])
         : [(sells[f] || 0) + " ships", "Ships this faction sells"];
       const a = PL && PL.access && PL.access[f];
       // The relation marker always takes its column (empty without a save) so names line up.
-      const rel = a ? `<span class="rel ${a.dock ? (a.relation > 0.0099 ? "pos" : "") : "neg"}" title="relation ${a.relation >= 0 ? "+" : ""}${a.relation}${a.dock ? "" : " — hostile: their stations will not dock you"}">${a.dock ? (a.relation > 0.0099 ? "▲" : "●") : "✕"}</span>` : `<span class="rel"></span>`;
+      const rel = a ? `<span class="rel ${a.dock ? (a.relation > 0.0099 ? "pos" : "") : "neg"}" title="relation ${a.relation >= 0 ? "+" : ""}${a.relation}${a.dock ? "" : ". Hostile: their stations will not dock you"}">${a.dock ? (a.relation > 0.0099 ? "▲" : "●") : "✕"}</span>` : `<span class="rel"></span>`;
       return `<label class="check frow ${hostile(f) ? "hostile" : ""}"><input type="checkbox" data-f="${f}" ${st.factions.includes(f) ? "checked" : ""}>${rel}<span class="fname">${factionName(f)}</span><span class="n" title="${yardTip}">${yard}</span></label>`;
     };
     $("#factions").innerHTML = present.map(row).join("") + (absent.length
@@ -693,7 +693,7 @@
       // Selected shipyards, with the focus lifted, decide whether the hull itself is on sale.
       const onSale = ship && O.sellerOk(ship, Object.assign({}, c, { focus: null }));
       $("#summary").textContent = ship ? `Fitting ${shipLabel(ship)}: ${r.results.length} distinct loadout${r.results.length === 1 ? "" : "s"}` +
-        (onSale ? "" : " — no selected shipyard sells this hull to you; parts are still those you can buy") : "";
+        (onSale ? "" : ". None of the selected shipyards sells you this hull, but its parts can still be bought.") : "";
       if (r.results.length && !r.results.some((x) => x.key === selected)) select(r.results[0].key);
     } else {
       $("#summary").textContent = `${r.results.length} loadouts of ${ships} ships` +
@@ -758,7 +758,7 @@
       const tip = x.ok ? "Will sell you this ship" + (st.factions.includes(x.f) ? "" : " (not among your selected factions)")
                        : x.why.length ? "Will not sell to you: " + x.why.join("; ") : "Not among your selected factions";
       const short = factionShort(x.f);
-      return `<span class="seller ${x.ok ? "ok" : "no"}${x.ok && !st.factions.includes(x.f) ? " unsel" : ""}" title="${short ? x.name + " — " : ""}${tip}">${short || x.name}</span>`;
+      return `<span class="seller ${x.ok ? "ok" : "no"}${x.ok && !st.factions.includes(x.f) ? " unsel" : ""}" title="${short ? x.name + ". " : ""}${tip}">${short || x.name}</span>`;
     }).join(", ") + (absent ? ` <span class="sub" title="${all.filter((x) => x.absent).map((x) => x.name).join(", ")}">+${absent} ${st.display.shortFactions ? "absent" : "without stations"}</span>` : "");
   }
 
@@ -855,7 +855,7 @@
     else if (p.mining) stat = `mining ${fmt(s.MiningRate, 1)}`;
     else if (kind === "turret") stat = `${fmt(s.TurretSustainedDPS, 1)} dps`;
     else stat = `${fmt(s.SustainedDPS, 1)} dps`;
-    return `${partName(p)} — ${stat} — ${money(p.price)}`;
+    return `${partName(p)} · ${stat} · ${money(p.price)}`;
   }
 
   function renderDetail() {
@@ -878,9 +878,9 @@
     }).join("") : "";
     const select = (key, label, list, cur, kind, pinned, allowEmpty) => {
       const options = [`<option value="auto">Auto (optimiser)</option>`]
-        .concat(allowEmpty ? [`<option value="none" ${pinned && cur === null ? "selected" : ""}>— empty —</option>`] : [])
+        .concat(allowEmpty ? [`<option value="none" ${pinned && cur === null ? "selected" : ""}>(empty)</option>`] : [])
         .concat(list.filter((i) => i !== null).map((i) => `<option value="${i}" ${pinned && cur === i ? "selected" : ""}>${partLabel(D.parts[i], s, kind)}</option>`));
-      const shown = !pinned ? (cur === null ? "— empty —" : partLabel(D.parts[cur], s, kind)) : "";
+      const shown = !pinned ? (cur === null ? "(empty)" : partLabel(D.parts[cur], s, kind)) : "";
       return `<div class="slot"><label>${label}</label><div><select data-key="${key}" class="${pinned ? "pinned" : ""}">${options.join("")}</select>
         ${!pinned ? `<div class="src">auto: ${shown}</div>` : ""}</div></div>`;
     };
@@ -1002,7 +1002,7 @@
     else if (kind === "thruster") add(lo.thruster, 1);
     else ship.groups.forEach((g, i) => { if (g.kind === kind) add(lo.groups[i], g.count); });
     const empty = kind !== "engine" && kind !== "thruster" ? ship.groups.filter((g, i) => g.kind === kind && lo.groups[i] == null).reduce((a, g) => a + g.count, 0) : 0;
-    return [...n].map(([k, c]) => `${c}× ${k}`).concat(empty ? [`<span class="muted">${empty} empty</span>`] : []).join("<br>") || `<span class="muted">—</span>`;
+    return [...n].map(([k, c]) => `${c}× ${k}`).concat(empty ? [`<span class="muted">${empty} empty</span>`] : []).join("<br>") || `<span class="muted">–</span>`;
   }
 
   function renderCompare() {
@@ -1029,7 +1029,7 @@
       const bv = base ? get(base) : null;
       return `<tr><th>${label}${unit ? ` <span class="sub">${unit}</span>` : ""}</th>` + cols.map((x, i) => {
         const v = vals[i];
-        if (v == null || !isFinite(v)) return `<td class="muted">—</td>`;
+        if (v == null || !isFinite(v)) return `<td class="muted">–</td>`;
         const p = x === base ? null : abs ? (bv != null ? v - bv : null) : bv ? pct(v, bv) : null;
         const good = p != null && Math.abs(p) >= (abs ? 0.05 : 0.5) ? (p * better > 0 ? "pos" : "neg") : "";
         const label = abs ? fmt(p, 1) : fmt(p, Math.abs(p) < 10 ? 1 : 0) + "%";
@@ -1055,7 +1055,7 @@
     if (ptsRows) body += groupRow("Score points (" + esc(PF.name) + ")") + ptsRows;
     body += groupRow("Loadout") + ["engine", "thruster", "shield", "weapon", "turret"].map((k) => {
       if (!live.some((x) => k === "engine" || k === "thruster" || x.ship.groups.some((g) => g.kind === k))) return "";
-      const cells = cols.map((x) => (x.gone ? `<td class="muted">—</td>` : `<td class="parts">${partsOf(x.ship, x.lo, k)}</td>`));
+      const cells = cols.map((x) => (x.gone ? `<td class="muted">–</td>` : `<td class="parts">${partsOf(x.ship, x.lo, k)}</td>`));
       return `<tr><th>${{ engine: "Engines", thruster: "Thrusters", shield: "Shields", weapon: "Weapons", turret: "Turrets" }[k]}</th>${cells.join("")}</tr>`;
     }).join("");
     const head = `<tr><th></th>` + cols.map((x, i) => `<th class="design">
@@ -1102,7 +1102,7 @@
       sel.innerHTML = profileOptions();
       sel.value = st.profile.source;
     }
-    const line = mod ? `<span class="warn">modified</span> — save it in Edit… or it stays a draft` : "";
+    const line = mod ? `<span class="warn">modified</span>, not saved yet (Save under Edit…)` : "";
     $("#profile-state").innerHTML = line;
     if ($("#pd-state")) $("#pd-state").innerHTML = (mod ? `<span class="warn">modified (unsaved)</span>` : `<span class="muted">saved</span>`);
     const src = sourceOf();
@@ -1141,12 +1141,12 @@
       const d = `data-m="${k}"`;
       const refLocked = rule.curve === "target" || k === "defence";
       return `<tr class="${on ? "" : "off"}"><td title="${M.better > 0 ? "more is better" : "less is better"}">${M.label} <span class="sub">${M.unit}</span></td>
-        <td>${numIn(`${d} data-f="weight" min="0" max="5"`, on ? R.weights[k] : null, "—")}</td>
+        <td>${numIn(`${d} data-f="weight" min="0" max="5"`, on ? R.weights[k] : null, "–")}</td>
         <td><select ${d} data-f="curve">${P.CURVES.map((c) => `<option ${c === rule.curve ? "selected" : ""}>${c}</option>`).join("")}</select></td>
-        <td>${numIn(`${d} data-f="target" min="0" ${rule.curve === "target" ? "" : "disabled"}`, rule.target, "—", true)}</td>
+        <td>${numIn(`${d} data-f="target" min="0" ${rule.curve === "target" ? "" : "disabled"}`, rule.target, "–", true)}</td>
         <td><select ${d} data-f="reference" ${refLocked ? "disabled" : ""}>${[["list", "best in list"], ["size", "best of same size"], ["fixed", "fixed value"]]
           .map(([v, l]) => `<option value="${v}" ${v === rule.reference ? "selected" : ""}>${l}</option>`).join("")}</select></td>
-        <td>${numIn(`${d} data-f="fixed" min="0" ${rule.reference === "fixed" && !refLocked ? "" : "disabled"}`, rule.fixed, "—", true)}</td>
+        <td>${numIn(`${d} data-f="fixed" min="0" ${rule.reference === "fixed" && !refLocked ? "" : "disabled"}`, rule.fixed, "–", true)}</td>
         <td>${numIn(`${d} data-f="min"`, rule.min, "none")}</td>
         <td>${numIn(`${d} data-f="max"`, rule.max, "none")}</td></tr>`;
     }).join("");
@@ -1168,7 +1168,7 @@
     if (!$("#pd-parts").options.length) {
       const seen = new Set();
       $("#pd-parts").innerHTML = D.parts.filter((p) => !seen.has(p.id) && seen.add(p.id))
-        .map((p) => `<option value="${esc(partName(p) + " — " + p.id)}">`).join("");
+        .map((p) => `<option value="${esc(partName(p) + " (" + p.id + ")")}">`).join("");
     }
     // Shared: defence split, threat profiles, trip.
     $("#pd-defence").innerHTML = O.DEFENCE_PARTS.map((x) =>
@@ -1251,7 +1251,7 @@
       if (e.target.id === "pd-ban-add") banPart();
     };
     const banPart = () => {
-      const v = $("#pd-ban-in").value, m = / — ([\w.-]+)$/.exec(v);
+      const v = $("#pd-ban-in").value, m = /\(([\w.-]+)\)$/.exec(v);
       const id = m ? m[1] : v.trim();
       if (!D.parts.some((p) => p.id === id)) { $("#pd-ban-in").setCustomValidity("Pick a part from the list"); $("#pd-ban-in").reportValidity(); return; }
       $("#pd-ban-in").setCustomValidity("");

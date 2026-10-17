@@ -1,17 +1,17 @@
 {
  "repo": "CheatingChicken/x4-ship-evaluator",
- "commit": "efa2fab25733b521c6e0deaf8465d181d3e99fdb",
+ "commit": "89eacb84433e8ba79538396680bcee5f1da6bc6b",
  "files": {
   "evaluator/index.html": "1e67e014d716cfe8b755b3dfbf4b064866c232abaeb87d18a54b947d18819099",
   "evaluator/style.css": "3a2fed66e71f909ae6a6d7cdffaf2b87e711fab941e902e8b6c026f71360459d",
-  "evaluator/app.js": "49967ca53c7c1a0a9e47c87c600b152a1d03bfd0c9839d8acecd99f254e9a7a6",
+  "evaluator/app.js": "bab737cc99cf29b3f681d15d17cf9c7666989ac81e74969d40637d4f3f4ac214",
   "evaluator/optimiser.js": "d6d98072065ec4f7347ce719a9e07fdaae9eb37eb5d51b90c511a5a0287602b1",
   "evaluator/profile.js": "829f0e61659c1da8f8c2b60d85fe19a272aa9dec9bf016cb964cb827560f6c9e",
   "evaluator/presets.js": "50de1a1f7824d3ae9f2ade10cd8212b7f363ae2e01eb6210966e819afa849d12",
-  "evaluator/setup.js": "7c38f70074762dd043df7f2e6092b11e8928b254fe0f45b8186f409f8faa0f2c",
+  "evaluator/setup.js": "415471558ff2a3c76baa0cbfbfb3ef02778056ef56870fc2060fbf953a910a51",
   "evaluator/livereload.js": "b1b47951fb8e26969fab44f660920420469d49acfad16a121ad95701d65c6d7a",
   "evaluator/savereader.js": "ceb61ce13dd1d927287dcdf2e25d332fd4c298a6ecdd5c9aa41eae99e5a5a4b4",
-  "tests/test_savereader.js": "4e9055584cb0761b82b6dffc2e528afcbe7a3329027ea6f020878b53e3912055",
+  "tests/test_savereader.js": "08fc34996054a8d9c0331dca12bce021302f9d9bdb29d90f7d0943d88fc8dfdd",
   "tests/test_optimiser.js": "bc84023e105a5b4d4059c18b646f5915f8fde2d102c77e44f3cf1829dc3a69b3",
   "tests/test_profile.js": "81b545015fa9ba9765154b29a5f094089183dbb7c5e1927405f44dd02344d21e",
   "tests/baseline.js": "72f5778a13de983713b481c41160c4e245da5a95c2d800c32b5d6394f55de81e"
