@@ -1,19 +1,19 @@
 {
  "repo": "CheatingChicken/x4-ship-evaluator",
- "commit": "7fdde04e3f47a8d6207980c09db13e9d74e85e3d",
+ "commit": "1d95f699a3a2dc0f398ded99c7b75d6dbbe8e7ff",
  "files": {
-  "evaluator/index.html": "b8a0e0ef5e9150e05000cd32655dfddaabd4e8e2c31c55066cc43ba64fe27250",
+  "evaluator/index.html": "c425d6e0315b9dc1b82582730b79c74284249278e593682a8ea21ab40ac00a32",
   "evaluator/style.css": "941fa374defc65a9aeaec5ac948ab81a0736865de2f7f5a83ec15554468e36b6",
-  "evaluator/app.js": "48ce9228ca2e3f470f076c86d1b6519e7b719bb343e5b64e45b6bdd0193d5a9c",
-  "evaluator/optimiser.js": "3fa7e2ed934e3a489ca2bf85e730b14c1ea49a97ee63f7fa7e6331181b1b3249",
-  "evaluator/profile.js": "829f0e61659c1da8f8c2b60d85fe19a272aa9dec9bf016cb964cb827560f6c9e",
+  "evaluator/app.js": "a6f4982f2c2f39e0f98dd0dcb9dfa49fe4a551d48fa69bfb8110b0bf2b4bfa37",
+  "evaluator/optimiser.js": "fdbc3f26f6040bbead21b572def8de94c6677c04e19c2b03ed80386a2ac372f9",
+  "evaluator/profile.js": "95f6f807bd93d4343cf2f9447c70696920000faeb8fd4c15114c9e760e528fab",
   "evaluator/presets.js": "f29b948b60efb7e05b1fbaececfbc8ba56a21929bc748243b6f1e56ad72ef02c",
   "evaluator/setup.js": "7d4b8695a6511b189dd694c9f7c3c992de925386e673808a459547a362f89712",
   "evaluator/livereload.js": "b1b47951fb8e26969fab44f660920420469d49acfad16a121ad95701d65c6d7a",
   "evaluator/savereader.js": "ceb61ce13dd1d927287dcdf2e25d332fd4c298a6ecdd5c9aa41eae99e5a5a4b4",
   "tests/test_savereader.js": "08fc34996054a8d9c0331dca12bce021302f9d9bdb29d90f7d0943d88fc8dfdd",
   "tests/test_optimiser.js": "bc84023e105a5b4d4059c18b646f5915f8fde2d102c77e44f3cf1829dc3a69b3",
-  "tests/test_profile.js": "81b545015fa9ba9765154b29a5f094089183dbb7c5e1927405f44dd02344d21e",
+  "tests/test_profile.js": "46876c062487d6aeecba4378e176ca3cf2aaf4f4521101ab010aedb3bc45fe44",
   "tests/baseline.js": "72f5778a13de983713b481c41160c4e245da5a95c2d800c32b5d6394f55de81e"
  }
 }

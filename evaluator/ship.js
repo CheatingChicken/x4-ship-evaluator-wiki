@@ -172,7 +172,8 @@
     return `<aside class="infobox">${image || ""}<table>
       ${head("Ship")}${row("Identifier", `<code>${esc(s.ware)}</code>`)}${row("Size", s.size.toUpperCase())}${row("Class", h.typeName(s.type))}
       ${row("Purpose", h.purposeName(s.purpose))}${row("Licence", h.licence(s.licence))}
-      ${d.supply != null ? row("Maintenance supply cost", num(d.supply, 0)) : ""}
+      ${s.threat ? row("Maintenance", `${num(s.threat, 0)} points per 30 min`) +
+        (c.maintenanceCredits ? row("In credits", `${cr(s.threat * c.maintenanceCredits)} <span class="muted small">at Corporation size</span>`) : "") : ""}
       ${head("Base stats")}${row("Hull", num(s.hull, 0))}${d.radar != null ? row("Radar range", num(d.radar / 1000, 1) + " km") : ""}${row("Mass", num(s.mass, 1) + " t")}
       ${head("Storage")}${["container", "solid", "liquid", "condensate"].map((t) => row(t[0].toUpperCase() + t.slice(1), num(cargo[t] || 0, 0))).join("")}
       ${head("Hangar")}${row("S ships", num(hang.dock_s || 0, 0))}${row("M ships", num(hang.dock_m || 0, 0))}
@@ -518,7 +519,8 @@
       status.textContent = "Loading ship data…";
       const [D, det] = await Promise.all([src.load(null, mods), src.details(mods)]);
       status.textContent = "";
-      const c = { D, det, cfg, mods: src.mods, enabled, labels: D.labels, licenceNames: (G.X4Opt || {}).LICENCE_NAMES };
+      const c = { D, det, cfg, mods: src.mods, enabled, labels: D.labels, licenceNames: (G.X4Opt || {}).LICENCE_NAMES,
+        maintenanceCredits: (G.X4Opt || {}).MAINTENANCE_CREDITS };
       // the mod switches, first thing on every page
       const toggles = cfg.sections.modToggles ? `<p class="modtoggles small">${r.kind === "index" ? "Ships" : "Equipment"} from: ${Object.entries(src.mods).map(([id, label]) => id === "swi"
         ? `<label><input type="checkbox" checked disabled> ${esc(label)}</label>`

@@ -218,12 +218,23 @@
     }
     return round3(compact(o));
   }
+  // A ship's threatscore, its maintenance cost under SWI (md/sw_maintenance.xml): the macro's own
+  // value, else SWI's default for its class and purpose (supplement threatdefaults, from
+  // libraries/defaults.xml; export.ship_threat in the local edition). XS ships pay none.
+  function threatOf(s, defaults) {
+    if (s.size === "xs") return 0;
+    const own = P(s, "threatscore.value", null);
+    if (own != null) return own;
+    const d = (defaults || {})["ship_" + s.size] || {};
+    const v = (d.purposes || {})[s.purpose];
+    return v != null ? v : d.default || 0;
+  }
   function shipDetail(s) {
     const v = (key) => (isNum(s.props[key]) ? s.props[key] : null);
     return compact({ page: { hull: s.hull, key: s.key }, icon: s.icon, description: longText(s.description), price: priceOf(s.w), build: s.w.build,
       groupTags: s.groups.map((g) => g.tags),                         // in the order of the ship's groups
       deployables: v("storage.deployable"), countermeasures: v("storage.countermeasure"), radar: v("radar.range"),
-      supply: v("threatscore.value") });
+      supply: s.threat });
   }
 
   // ---------------------------------------------------------------- fetching
@@ -483,6 +494,7 @@
       outShips.push({ id: s.id, ware: s.w.ware, name: s.name || s.id, variation: s.variation, size: s.size, type: s.type,
         purpose: s.purpose, race: s.race, origin: s.src,
         page: { hull: s.hull, key: s.key },   // its wiki page: [submods/<mod>/]ships/<hull>/<key>
+        threat: (s.threat = threatOf(s, sup.threatdefaults)),
         price: s.w.price || 0, owners: s.w.owners, licence: s.w.licence,
         blueprintable: s.w.blueprintable, hull: P(s, "hull.max"), crew: P(s, "people.capacity"), mass: P(s, "physics.mass"),
         cargo, drones: P(s, "storage.unit"), missiles: P(s, "storage.missile"), hangar,

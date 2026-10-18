@@ -109,7 +109,7 @@
     role: "trader", cargoType: { trader: "container", miner: "solid" }, sizes: [], types: [],
     threats: { trader: ["safe", "contested", "dangerous"], miner: ["safe", "contested", "dangerous"] },
     sourcing: ["single", "mixed"], bestOnly: false, focus: null, profiles: {}, profile: null,
-    display: { showIds: false, shortFactions: true, hideVanilla: true }, compare: [], compareDiff: false,
+    display: { showIds: false, shortFactions: true, hideVanilla: true }, game: { maintenance: 100 }, compare: [], compareDiff: false,
     factions: defaultFactions(), useSave: !!PL, showAbsent: false, playerBuild: PL ? PL.blueprints.slice() : [],
     priceMin: 0, priceMax: 0, priceBasis: "hull", pins: {}, sort: [{ key: "score", asc: false }],
   });
@@ -130,6 +130,9 @@
   if (saveStamp && st.saveStamp !== saveStamp) { st.factions = defaultFactions(); st.saveStamp = saveStamp; }
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(st)); } catch (e) { /* ignore */ } };
   st.display = Object.assign({ showIds: false, shortFactions: true, hideVanilla: true }, st.display);
+  // The player's own game rules (Settings, Your game): SWI maintenance in percent, 0 where a mod turns it off.
+  st.game = Object.assign({ maintenance: 100 }, st.game);
+  O.setMaintenanceScale(st.game.maintenance / 100);
   st.factions = (st.factions || []).filter((f) => !vanilla(f));
   st.compare = Array.isArray(st.compare) ? st.compare : [];
   // A picked ship the data no longer has (its submod switched off, a game update) would rank
@@ -448,6 +451,8 @@
 
   async function renderSettings() {
     $("#opt-ids").checked = !!st.display.showIds;
+    $("#opt-maint").value = st.game.maintenance;
+    $("#gamerules").hidden = !isSwi;   // maintenance is SW Interworlds' own rule
     $("#opt-short").checked = !!st.display.shortFactions;
     $("#opt-vanilla").checked = hideVanilla;
     seg($("#opt-density"), DENSITIES, st.display.density || "normal", (v) => { st.display.density = v; applyDisplay(); save(); renderSettings(); });
@@ -620,6 +625,12 @@
       location.reload();
     };
     $("#opt-ids").onchange = (e) => { st.display.showIds = e.target.checked; applyDisplay(); save(); };
+    $("#opt-maint").onchange = (e) => {
+      st.game.maintenance = Math.min(1000, Math.max(0, Math.round(+e.target.value || 0)));
+      e.target.value = st.game.maintenance;
+      O.setMaintenanceScale(st.game.maintenance / 100);
+      changed();
+    };
     $("#opt-short").onchange = (e) => { st.display.shortFactions = e.target.checked; save(); if (last) { renderTable(); renderDetail(); } };
     $("#opt-vanilla").onchange = (e) => {
       hideVanilla = st.display.hideVanilla = e.target.checked;
@@ -947,7 +958,7 @@
       ${r.threats.length > 1 ? `<div class="muted small">Score per profile: ${memberScores(r)}</div>` : ""}
       ${breakdownHtml(r)}
       <table class="figures"><tr class="grp"><th colspan="2">Overview</th></tr><tr><td>Score</td><td>${fmt(r.score, 1)}</td></tr>
-        <tr><td>Hull price</td><td>${money(s.price)}</td></tr>${metricRow("price")}${metricGroups}</table>
+        <tr><td>Hull price</td><td>${money(s.price)}</td></tr>${metricRow("price")}${metricRow("maintenance")}${metricGroups}</table>
       ${defenceRows ? `<h2>Defence <span class="muted">vs. best of ${refs.ships} ${s.size.toUpperCase()} ship${refs.ships === 1 ? " (itself)" : "s"} in this list</span></h2><table>${defenceRows}</table>` : ""}
       ${m.trip && isFinite(m.trip.total) ? `<h2>Trip <span class="muted">${PF.trip.km} km leg</span></h2><table>
         <tr><td>Travel drive charge</td><td>${fmt(m.trip.charge, 1)} s</td></tr>
@@ -1231,6 +1242,8 @@
         ${["shield", "turret", "weapon"].map((r) => `<td><input type="checkbox" data-t="${k}" data-tr="${r}" ${t.require[r] ? "checked" : ""}></td>`).join("")}</tr>`).join("");
     $("#pd-km").value = PF.trip.km;
     $("#pd-turn").value = PF.trip.turn;
+    $("#pd-empire").innerHTML = O.EMPIRE_LEVELS.map((l, i) =>
+      `<option value="${i}"${PF.maintenance.empire === i ? " selected" : ""}>${esc(l.name)}: ×${l.mult} (${esc(l.assets)})</option>`).join("");
   }
 
   function onProfileInput(e) {
@@ -1260,6 +1273,7 @@
       if (t.dataset.tf) th.defence = Math.min(10, Math.max(0, +t.value || 0)); else th.require[t.dataset.tr] = t.checked;
     } else if (t.id === "pd-km") PF.trip.km = Math.min(1000, Math.max(1, +t.value || 50));
     else if (t.id === "pd-turn") PF.trip.turn = Math.min(180, Math.max(0, +t.value || 0));
+    else if (t.id === "pd-empire") PF.maintenance.empire = Math.min(O.EMPIRE_LEVELS.length - 1, Math.max(0, +t.value || 0));
     else if (t.id === "pd-author") PF.author = t.value.slice(0, 80);
     else if (t.id === "pd-notes") PF.notes = t.value.slice(0, 2000);
     else return;

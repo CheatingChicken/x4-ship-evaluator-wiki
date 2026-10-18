@@ -36,6 +36,7 @@
     shieldRegen:  { label: "Shield regen",     unit: "/s",   better: +1, fn: (m) => m.shieldRegen },
     hull:         { label: "Hull",             unit: "",     better: +1, fn: (m) => m.hull },
     price:        { label: "Fitted price",     unit: "Cr",   better: -1, fn: (m) => m.price },
+    maintenance:  { label: "Maintenance",      unit: "Cr/30 min", better: -1, fn: (m) => m.maintenance },
     tripTime:     { label: "Trip time",        unit: "s",    better: -1, fn: (m) => m.trip.total },
     throughput:   { label: "Throughput",       unit: "m³/min", better: +1, fn: (m) => (m.trip.total > 0 ? (60 * m.cargo) / m.trip.total : 0) },
     efficiency:   { label: "Throughput / M Cr", unit: "",    better: +1, fn: (m) => (m.trip.total > 0 ? (60 * m.cargo) / m.trip.total : 0) / Math.max(m.price / 1e6, 1e-6) },
@@ -60,7 +61,7 @@
     forwardDps: "Offence", burstDps: "Offence", turretDps: "Offence", missiles: "Offence",
     defence: "Defence", shield: "Defence", shieldRegen: "Defence", hull: "Defence", toughness: "Defence",
     hangar: "Capacity", crew: "Capacity",
-    price: "Price",
+    price: "Price", maintenance: "Price",
   };
   for (const [k, g] of Object.entries(GROUP_OF)) if (METRICS[k]) METRICS[k].group = g;
 
@@ -107,9 +108,9 @@
   const ROLES = {
     // Throughput (cargo per minute over the trip model below) is what top speed, acceleration,
     // charge time and turning add up to for a hauler; their own sliders start at 0 or 1.
-    trader: { label: "Trader", threats: true, trip: true, weights: { throughput: 5, cargo: 2, tripTime: 1, turnTime: 1, acceleration: 1, travelSpeed: 0, maxSpeed: 0, chargeTime: 0, defence: 1, price: 2, efficiency: 3, crew: 0 } },
-    miner:  { label: "Miner",  threats: true, trip: true, weights: { throughput: 3, miningRate: 4, drones: 4, cargo: 2, tripTime: 1, turnTime: 1, acceleration: 1, travelSpeed: 0, maxSpeed: 0, defence: 1, price: 2, efficiency: 2, crew: 0 } },
-    combat: { label: "Combat", weights: { forwardDps: 4, turretDps: 3, burstDps: 1, shield: 3, shieldRegen: 1, hull: 3, maxSpeed: 2, boostSpeed: 1, acceleration: 2, turnRate: 2, turnTime: 2, missiles: 1, hangar: 1, price: 2, travelSpeed: 0, crew: 0 } },
+    trader: { label: "Trader", threats: true, trip: true, weights: { throughput: 5, cargo: 2, tripTime: 1, turnTime: 1, acceleration: 1, travelSpeed: 0, maxSpeed: 0, chargeTime: 0, defence: 1, price: 2, efficiency: 3, crew: 0, maintenance: 0 } },
+    miner:  { label: "Miner",  threats: true, trip: true, weights: { throughput: 3, miningRate: 4, drones: 4, cargo: 2, tripTime: 1, turnTime: 1, acceleration: 1, travelSpeed: 0, maxSpeed: 0, defence: 1, price: 2, efficiency: 2, crew: 0, maintenance: 0 } },
+    combat: { label: "Combat", weights: { forwardDps: 4, turretDps: 3, burstDps: 1, shield: 3, shieldRegen: 1, hull: 3, maxSpeed: 2, boostSpeed: 1, acceleration: 2, turnRate: 2, turnTime: 2, missiles: 1, hangar: 1, price: 2, travelSpeed: 0, crew: 0, maintenance: 0 } },
   };
 
   // ---------------------------------------------------------------- availability
@@ -187,6 +188,7 @@
       forwardDps: 0, burstDps: 0, turretDps: 0, missiles: ship.missiles,
       hangar: hangarShips(ship),
       price: ship.price,
+      maintenance: maintenanceOf(ship),
     };
     if (lo.engine != null) m.price += P[lo.engine].price * (eng ? eng.engines : 1);
     if (lo.thruster != null) m.price += P[lo.thruster].price;
@@ -222,6 +224,28 @@
    * rate; travel deceleration and yaw acceleration are formula values the game does not report. */
   const DEFAULT_TRIP = 50000;  // metres
   const TRIP = { turn: 90 };   // degrees turned onto course; configurable (configure())
+
+  /* MAINTENANCE (SW Interworlds, md/sw_maintenance.xml and md/sw_reactivemain.xml). Every 30
+   * minutes each player ship except XS costs its threatscore (ship.threat: its macro's own value,
+   * else SWI's default for its class and purpose) times the empire-size multiplier, paid in ship
+   * supplies (2 per point, at owned equipment docks) or else in credits, 5,000 Cr per point. Ships
+   * docked at a suitable dock of the player's pay 75%. SWI sets the empire size from the value of the
+   * player's assets. The metric is one ship's credit cost in open space; the empire size is a
+   * rating-profile setting (configure()). */
+  const EMPIRE_LEVELS = [
+    { name: "Privateer", assets: "assets under 150 M Cr", mult: 0 },
+    { name: "Private Company", assets: "150 to 300 M Cr", mult: 0.3 },
+    { name: "Organisation", assets: "300 to 600 M Cr", mult: 0.6 },
+    { name: "Corporation", assets: "600 M to 1 B Cr", mult: 1.0 },
+    { name: "Major Faction", assets: "1 to 1.5 B Cr", mult: 1.5 },
+    { name: "Empire", assets: "1.5 B Cr and more", mult: 2.0 },
+  ];
+  const MAINTENANCE_CREDITS = 5000;  // per threatscore point not covered by ship supplies
+  // empire: index into EMPIRE_LEVELS (rating profile, configure()); scale: the player's own game,
+  // 1 as SWI ships it, 0 where a mod turns maintenance off (page Settings, setMaintenanceScale()).
+  const MAINTENANCE = { empire: 3, scale: 1 };
+  const maintenanceOf = (ship) => (ship.threat || 0) * EMPIRE_LEVELS[MAINTENANCE.empire].mult * MAINTENANCE_CREDITS * MAINTENANCE.scale;
+  function setMaintenanceScale(v) { MAINTENANCE.scale = isFinite(+v) ? Math.min(10, Math.max(0, +v)) : 1; }
 
   function ramp(dist, vmax, acc, dec) {
     if (!(vmax > 0) || !(acc > 0)) return Infinity;
@@ -368,9 +392,9 @@
     score(m, weights, scales, false, opts) - LIMIT_PENALTY * violation(m, (opts && opts.rules) || {});
 
   // Metrics the hull alone decides: limits on these filter the shortlist before any fitting.
-  const HULL_METRICS = ["cargo", "hull", "drones", "missiles", "hangar", "crew"];
+  const HULL_METRICS = ["cargo", "hull", "drones", "missiles", "hangar", "crew", "maintenance"];
   const hullValues = (s, ctx) => ({ cargo: s.cargo[ctx.cargoType || "container"] || 0, hull: s.hull, drones: s.drones,
-                                    missiles: s.missiles, hangar: hangarShips(s), crew: s.crew || 0 });
+                                    missiles: s.missiles, hangar: hangarShips(s), crew: s.crew || 0, maintenance: maintenanceOf(s) });
 
   // A part's use (x4cat/export.py part_use); data exported before that field existed falls back.
   const LAUNCHER_KINDS = ["missilelauncher", "bomblauncher", "missileturret"];
@@ -624,6 +648,7 @@
       bump("cargo", s.cargo[ctx.cargoType || "container"] || 0);
       bump("hull", s.hull); bump("toughness", s.hull); bump("drones", s.drones); bump("missiles", s.missiles);
       bump("price", s.price);
+      bump("maintenance", maintenanceOf(s));
       for (const e of Object.values(s.engines)) {
         bump("maxSpeed", e.ForwardSpeed); bump("travelSpeed", e.TravelSpeed); bump("boostSpeed", e.BoostSpeed);
         bump("acceleration", e.ForwardAcceleration); bump("chargeTime", e.TravelChargeTime);
@@ -703,6 +728,7 @@
     defence: Object.fromEntries(DEFENCE_PARTS.map((d) => [d.key, d.weight])),
     threats: Object.fromEntries(Object.entries(THREATS).map(([k, t]) => [k, { defence: t.defence, require: t.require }])),
     turn: TRIP.turn,
+    empire: MAINTENANCE.empire,
   }));
 
   /* configure(profile): a full rating profile (profile.js resolve()) sets everything below plus
@@ -714,7 +740,7 @@
       for (const [r, role] of Object.entries(cfg.roles)) {
         RULES[r] = { metrics: role.metrics || {}, slots: role.slots || {}, purposes: role.purposes || [] };
       }
-      cfg = { defence: cfg.defence, threats: cfg.threats, turn: cfg.trip && cfg.trip.turn };
+      cfg = { defence: cfg.defence, threats: cfg.threats, turn: cfg.trip && cfg.trip.turn, empire: cfg.maintenance && cfg.maintenance.empire };
     }
     const d = Object.assign({}, DEFAULTS.defence, cfg.defence);
     const total = Object.values(d).reduce((a, b) => a + Math.max(0, +b || 0), 0) || 1;
@@ -726,6 +752,8 @@
                     weapon: !!(c.require && c.require.weapon) };
     }
     TRIP.turn = Math.min(180, Math.max(0, +(cfg.turn != null ? cfg.turn : DEFAULTS.turn) || 0));
+    const empire = Math.round(+(cfg.empire != null ? cfg.empire : DEFAULTS.empire));
+    MAINTENANCE.empire = isFinite(empire) ? Math.min(EMPIRE_LEVELS.length - 1, Math.max(0, empire)) : DEFAULTS.empire;
   }
 
   /* LICENCE NAMES for the pages. The game has no faction-independent name for a licence type:
@@ -737,7 +765,7 @@
   };
   const licenceName = (l) => (l ? LICENCE_NAMES[l] || l : "None");
 
-  const api = { LICENCE_NAMES, licenceName, METRIC_GROUPS, PURPOSE_GROUPS, DEFAULT_COMBAT_PURPOSES, purposeGroup, METRICS, ROLES, THREATS, DEFAULTS, configure, DEFAULT_TRIP, trip, DEFENCE_PARTS, defenceParts, sellerOk, factionSells, buyBlockers, evaluate, score, explain, objective, violation, rulesOf, useOf, HULL_METRICS, candidates, optimise, rank, variants, shortlist, applyFittedFloor };
+  const api = { LICENCE_NAMES, licenceName, EMPIRE_LEVELS, MAINTENANCE_CREDITS, maintenanceOf, setMaintenanceScale, METRIC_GROUPS, PURPOSE_GROUPS, DEFAULT_COMBAT_PURPOSES, purposeGroup, METRICS, ROLES, THREATS, DEFAULTS, configure, DEFAULT_TRIP, trip, DEFENCE_PARTS, defenceParts, sellerOk, factionSells, buyBlockers, evaluate, score, explain, objective, violation, rulesOf, useOf, HULL_METRICS, candidates, optimise, rank, variants, shortlist, applyFittedFloor };
   root.X4Opt = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

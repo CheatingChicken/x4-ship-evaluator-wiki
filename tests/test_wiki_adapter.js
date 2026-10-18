@@ -54,7 +54,7 @@ function loadLocal() {
   for (const id of Object.keys(aShip)) {
     const a = aShip[id], l = lShip[id];
     if (!l) { add("ship only on the wiki side", id); continue; }
-    for (const f of ["name", "size", "type", "purpose", "ware", "price", "licence", "blueprintable", "hull", "crew", "drones", "missiles"])
+    for (const f of ["name", "size", "type", "purpose", "ware", "price", "licence", "blueprintable", "hull", "crew", "drones", "missiles", "threat"])
       if (!same(a[f], l[f])) add("ship field " + f, `${id}: wiki ${JSON.stringify(a[f])} local ${JSON.stringify(l[f])}`);
     if (!same(a.owners, l.owners)) add("ship owners", `${id}: wiki ${a.owners} local ${l.owners}`);
     if (!same(a.cargo, l.cargo)) add("ship cargo", `${id}: wiki ${JSON.stringify(a.cargo)} local ${JSON.stringify(l.cargo)}`);

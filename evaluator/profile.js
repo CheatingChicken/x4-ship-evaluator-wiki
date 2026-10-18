@@ -13,7 +13,8 @@
  *       purposes: [fight|trade|mine|other] } },            which ships the role ranks (combat)
  *     defence: { shield, regen, hull, pd, escape },           percentages, normalised to 100
  *     threats: { id: { defence, require: { shield, weapon, turret } } },
- *     trip:    { km, turn } }
+ *     trip:    { km, turn },
+ *     maintenance: { empire } }                               SWI empire size, 0..5 (optimiser EMPIRE_LEVELS)
  *
  * Profiles come from strangers: normalise() keeps only known keys and clamps every number, and
  * nothing in a profile is ever executed. Text fields must still be escaped wherever they are
@@ -74,6 +75,7 @@
       defence: Object.fromEntries(Object.entries(D.defence).map(([k, v]) => [k, Math.round(v * 100)])),
       threats: clone(D.threats),
       trip: { km: (O.DEFAULT_TRIP || 50000) / 1000, turn: D.turn },
+      maintenance: { empire: D.empire },
     };
   }
   const DEFAULTS = buildDefaults();
@@ -153,6 +155,9 @@
       if ("km" in src.trip) dst.trip.km = num(src.trip.km, 1, 1000, dst.trip.km);
       if ("turn" in src.trip) dst.trip.turn = num(src.trip.turn, 0, 180, dst.trip.turn);
     }
+    if (isObj(src.maintenance) && "empire" in src.maintenance) {
+      dst.maintenance.empire = Math.round(num(src.maintenance.empire, 0, O.EMPIRE_LEVELS.length - 1, dst.maintenance.empire));
+    }
     return dst;
   }
 
@@ -181,7 +186,7 @@
       }
       return a === d ? undefined : a;
     };
-    for (const k of ["roles", "defence", "threats", "trip"]) {
+    for (const k of ["roles", "defence", "threats", "trip", "maintenance"]) {
       const v = walk(full[k], DEFAULTS[k]);
       if (v !== undefined) out[k] = v;
     }

@@ -141,6 +141,11 @@
       <h3>Trip model</h3>
       <div class="row small"><label>Leg length <input type="number" id="pd-km" min="1" max="1000" step="1"> km</label>
         <label>Turn onto course <input type="number" id="pd-turn" min="0" max="180" step="1"> °</label></div>
+      <h3>Maintenance <span class="muted small">(SW Interworlds)</span></h3>
+      <div class="row small"><label>Empire size <select id="pd-empire"></select></label></div>
+      <p class="muted small">Every 30 minutes each ship costs its maintenance points times the empire-size multiplier times 5,000 Cr.
+        SWI sets your empire size from the value of your assets. Ship supplies and sectors you own can cover part of the bill;
+        a ship docked at a suitable dock of yours pays 75%. The Maintenance metric is one ship's cost in open space.</p>
       <p class="muted small">Values measured from the game, such as speeds, turn rates, DPS and shields, cannot be changed here.</p>
     </section>
   </form>
@@ -171,6 +176,13 @@
       <label class="check"><input type="checkbox" id="opt-short"> Abbreviate faction names (in-game short names, e.g. IMP, KDY; full name on hover)</label>
       <div class="row small">Table rows <div class="seg" id="opt-density"></div></div>
       <label class="check"><input type="checkbox" id="opt-vanilla"> Hide the base game's factions (Argon, Teladi, …). They do not appear in SW Interworlds.</label>
+    </section>
+
+    <section id="gamerules">
+      <h2>Your game</h2>
+      <div class="row small"><label>Maintenance cost <input type="number" id="opt-maint" min="0" max="1000" step="1"> %</label></div>
+      <p class="muted small">100% is SW Interworlds as released. Match your game: 50% for mods that halve maintenance, 0% if a mod
+        turns it off. Applies to the Maintenance metric with any rating profile.</p>
     </section>
 
 

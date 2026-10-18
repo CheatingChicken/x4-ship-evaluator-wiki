@@ -132,6 +132,30 @@ ok("a newer version is read, with a warning", () => {
   assert.ok(warnings.some((w) => /newer version/.test(w)));
 });
 
+// ---------------------------------------------------------------- SWI maintenance
+ok("maintenance: threat x empire multiplier x 5,000 Cr, scaled by the game setting", () => {
+  const ship = { threat: 90 }, EL = O.EMPIRE_LEVELS;
+  O.configure(P.resolve({}));
+  assert.strictEqual(O.maintenanceOf(ship), 90 * EL[3].mult * 5000);              // default: Corporation, x1
+  O.configure(P.resolve({ maintenance: { empire: 5 } }));
+  assert.strictEqual(O.maintenanceOf(ship), 90 * 2.0 * 5000);                     // Empire, x2
+  O.configure(P.resolve({ maintenance: { empire: 0 } }));
+  assert.strictEqual(O.maintenanceOf(ship), 0);                                   // Privateer pays nothing
+  O.configure(P.resolve({}));
+  O.setMaintenanceScale(0.5);
+  assert.strictEqual(O.maintenanceOf(ship), 90 * 5000 * 0.5);                     // a mod halving it
+  O.setMaintenanceScale(1);
+  assert.strictEqual(O.maintenanceOf({}), 0);                                     // no threatscore, no cost
+  O.configure({});
+});
+
+ok("maintenance: the empire size is kept sparse and clamped", () => {
+  assert.strictEqual(P.diff(P.resolve({})).maintenance, undefined);
+  const { profile } = P.normalise(Object.assign({}, sample, { maintenance: { empire: 99 } }));
+  assert.deepStrictEqual(profile.maintenance, { empire: O.EMPIRE_LEVELS.length - 1 });
+  assert.strictEqual(P.resolve(P.normalise(Object.assign({}, sample, { maintenance: { empire: "x" } })).profile).maintenance.empire, 3);
+});
+
 // ---------------------------------------------------------------- engine with the default profile
 ok("configure(default profile) reproduces the baseline ranking", () => {
   const full = P.resolve({});

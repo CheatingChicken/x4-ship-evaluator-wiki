@@ -38,7 +38,8 @@ ok("routes");
   const D = S.merge(manifest, all.map((id) => chunks[id]));
   const det = S.mergeDetails(all.map((id) => JSON.parse(JSON.stringify(details[id]))));
   const mods = Object.fromEntries(manifest.mods.map((m) => [m.id, m.label]));
-  const c = { D, det, cfg: P.CONFIG, mods, enabled: Object.keys(W.MODS), labels: D.labels, licenceNames: O.LICENCE_NAMES };
+  const c = { D, det, cfg: P.CONFIG, mods, enabled: Object.keys(W.MODS), labels: D.labels, licenceNames: O.LICENCE_NAMES,
+    maintenanceCredits: O.MAINTENANCE_CREDITS };
 
   // every ship: its address finds it again, and its page renders every section it should
   for (const s of D.ships) {
@@ -52,7 +53,7 @@ ok("routes");
   // the E-wing against what its wiki page shows (2026-10-17)
   const ewing = P.findShip(D, det, P.route("ships/s/ewing"));
   const page = P.renderShip(c, ewing);
-  for (const want of ["E-wing E-07", "201,852 cr", "252,315 cr", "328,009 cr", "Durasteel Plates", "FreiTek", "Military ship", "?ship=ewing_macro"])
+  for (const want of ["2 points per 30 min", "10,000 cr", "E-wing E-07", "201,852 cr", "252,315 cr", "328,009 cr", "Durasteel Plates", "FreiTek", "Military ship", "?ship=ewing_macro"])
     assert.ok(page.includes(want), "E-wing page shows " + want);
   ok("E-wing page content");
 
