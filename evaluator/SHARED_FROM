@@ -1,10 +1,10 @@
 {
  "repo": "CheatingChicken/x4-ship-evaluator",
- "commit": "1d95f699a3a2dc0f398ded99c7b75d6dbbe8e7ff",
+ "commit": "2a3fb0c8bab8d311235990a68cbbdeeffaea00f6",
  "files": {
-  "evaluator/index.html": "c425d6e0315b9dc1b82582730b79c74284249278e593682a8ea21ab40ac00a32",
-  "evaluator/style.css": "941fa374defc65a9aeaec5ac948ab81a0736865de2f7f5a83ec15554468e36b6",
-  "evaluator/app.js": "a6f4982f2c2f39e0f98dd0dcb9dfa49fe4a551d48fa69bfb8110b0bf2b4bfa37",
+  "evaluator/index.html": "f5feaffaf21a1a47d8a4709fbba2540585b4074de1e5ad9f6efed647f3d4fe8a",
+  "evaluator/style.css": "a5ddcf9016884c4494c206e7c8981c9ffca6b9da09cca167aab982afd95e9a12",
+  "evaluator/app.js": "bea656a0f37eaaeda7434b6c3d2f8ffe37f43fb517c145fd0e09a8aed8688ba3",
   "evaluator/optimiser.js": "fdbc3f26f6040bbead21b572def8de94c6677c04e19c2b03ed80386a2ac372f9",
   "evaluator/profile.js": "95f6f807bd93d4343cf2f9447c70696920000faeb8fd4c15114c9e760e528fab",
   "evaluator/presets.js": "f29b948b60efb7e05b1fbaececfbc8ba56a21929bc748243b6f1e56ad72ef02c",

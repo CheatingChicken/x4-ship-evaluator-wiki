@@ -284,3 +284,16 @@ body.density-comfortable { --row-pad: 10px; }
 body.no-detail #detail { display: none; }
 body.no-detail main { grid-template-columns: 290px minmax(0, 1fr); }
 @media (max-width: 1200px) { body.no-detail main { grid-template-columns: 260px minmax(0, 1fr); } }
+
+/* (i) on a section title: its explainer shows on hover or keyboard focus, as a box under the title
+   spanning the section (so the narrow sidebar does not clip it). The text is the icon's aria-label. */
+h2:has(> .info), h3:has(> .info) { position: relative; }
+.info { display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 6px; vertical-align: 1px;
+  border: 1px solid var(--muted); border-radius: 50%; color: var(--muted); cursor: help;
+  font: italic 600 10px/1 Georgia, "Times New Roman", serif; text-transform: none; letter-spacing: 0; }
+.info:hover, .info:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
+.info:hover::after, .info:focus::after {
+  content: attr(aria-label); position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+  padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35); white-space: normal; text-align: left;
+  font: 400 12px/1.45 system-ui, "Segoe UI", sans-serif; font-style: normal; text-transform: none; letter-spacing: normal; }

@@ -271,13 +271,13 @@
     if (st.role === "trader" || st.role === "miner") {
       const types = st.role === "trader" ? [["container", "Container"], ["solid", "Solid"], ["liquid", "Liquid"]] : [["solid", "Ore (solid)"], ["liquid", "Gas (liquid)"]];
       const sel = st.threats[st.role];
-      opts.innerHTML = `<div class="seg" id="cargo-type"></div><h2 class="sub">Threat profiles shown</h2>
+      opts.innerHTML = `<div class="seg" id="cargo-type"></div><h2 class="sub">Threat profiles shown${info("Each selected profile adds its own row for every ship. Hover over a profile to see its rules.")}</h2>
         <div class="chips" id="threats">` + Object.entries(O.THREATS).map(([k, t]) =>
           `<button data-v="${k}" class="${sel.includes(k) ? "on" : ""}" title="${threatTip(t, k)}">${t.label}</button>`).join("") +
-        `</div><p class="muted small">Each selected profile adds its own row for every ship. Hover over a profile to see its rules.</p>
-        <h2 class="sub">Trip length</h2><div class="seg" id="trip"></div>
-        <p class="muted small">Time for one leg from a standstill, including drive charge, turning onto course, acceleration, cruising and braking.
-        On short legs, acceleration and turning matter most. On long legs, top speed matters most.</p>`;
+        `</div>
+        <h2 class="sub">Trip length${info("Time for one leg from a standstill, including drive charge, turning onto course, acceleration, " +
+          "cruising and braking. On short legs, acceleration and turning matter most. On long legs, top speed matters most.")}</h2>
+        <div class="seg" id="trip"></div>`;
       const kms = [...new Set([10, 25, 50, 100, 250, PF.trip.km])].sort((a, b) => a - b);
       seg($("#trip"), kms.map((k) => [String(k), k + " km"]), String(PF.trip.km), (v) => { PF.trip.km = +v; commitProfile(); });
       seg($("#cargo-type"), types, st.cargoType[st.role], (v) => { st.cargoType[st.role] = v; changed(true); });
@@ -314,8 +314,7 @@
                 `<label class="check" data-name="${esc((label(t) + " " + t).toLowerCase())}" title="${esc(typeTip(t))}"><input type="checkbox" data-t="${esc(t)}"${sel.includes(t) ? " checked" : ""}> ${esc(label(t))}<span class="n">${counts[t]}</span></label>`).join("") +
               `</div>`).join("")}
           </div>
-        </details>
-        <p class="muted small">None selected = all combat ships.</p>`;
+        </details>`;
       const det = $("#types");
       const filterTypes = () => {
         const q = typesUi.q.trim().toLowerCase();
@@ -960,12 +959,12 @@
       <table class="figures"><tr class="grp"><th colspan="2">Overview</th></tr><tr><td>Score</td><td>${fmt(r.score, 1)}</td></tr>
         <tr><td>Hull price</td><td>${money(s.price)}</td></tr>${metricRow("price")}${metricRow("maintenance")}${metricGroups}</table>
       ${defenceRows ? `<h2>Defence <span class="muted">vs. best of ${refs.ships} ${s.size.toUpperCase()} ship${refs.ships === 1 ? " (itself)" : "s"} in this list</span></h2><table>${defenceRows}</table>` : ""}
-      ${m.trip && isFinite(m.trip.total) ? `<h2>Trip <span class="muted">${PF.trip.km} km leg</span></h2><table>
+      ${m.trip && isFinite(m.trip.total) ? `<h2>Trip <span class="muted">${PF.trip.km} km leg</span>${info("Turn acceleration and travel deceleration are formula values the game does not report; the rest is measured.")}</h2><table>
         <tr><td>Travel drive charge</td><td>${fmt(m.trip.charge, 1)} s</td></tr>
         <tr><td>Turn 90° onto course</td><td>${fmt(m.trip.turn, 1)} s <span class="sub">${fmt(m.turnRate, 1)}°/s</span></td></tr>
         <tr><td>Travel</td><td>${fmt(m.trip.move, 1)} s <span class="sub">${m.trip.reachesTop ? "reaches" : "never reaches"} ${fmt(m.travelSpeed)} m/s</span></td></tr>
         <tr><td><b>Total</b></td><td><b>${fmt(m.trip.total, 1)} s</b> <span class="sub">${fmt((60 * m.cargo) / m.trip.total)} m³/min</span></td></tr>
-      </table><p class="src">Turn acceleration and travel deceleration are formula values the game does not report; the rest is measured.</p>` : ""}
+      </table>` : ""}
       <h2>Loadout</h2>${slots}
       <div class="row"><button id="unpin">Reset to auto</button><button id="copy">Copy loadout</button><button id="cmp-toggle">${inCompare(s, lo) ? "✓ In comparison" : "+ Add to comparison"}</button></div>
       <div class="src">Movement: ${eng.src === "game" ? "measured in game" : "formula"} · DPS/shields: per part, see tooltips in the list</div>`;
@@ -1150,6 +1149,8 @@
   }
 
   // ---------------------------------------------------------------- rating profile: picker + dialog
+  // An (i) on a section title whose tooltip (style.css .info) explains the section.
+  const info = (text) => ` <span class="info" tabindex="0" role="note" aria-label="${esc(text)}">i</span>`;
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const profileOptions = () =>
     `<optgroup label="Built in">${PRESETS.map((p) => `<option value="preset:${p.id}">${esc(p.profile.name)}</option>`).join("")}</optgroup>` +
@@ -1214,12 +1215,11 @@
     const banned = R.slots.ban.map((id) => { const p = D.parts.find((x) => x.id === id);
       return `<span class="chip" title="${esc(id)}">${esc(p ? partName(p) : id + " (not in your data)")} <button type="button" data-unban="${esc(id)}">×</button></span>`; }).join(" ");
     $("#pd-role").innerHTML = `
-      <h3>Metrics</h3>
+      <h3>Metrics${info("Weight runs from 0 to 5; leave it blank to hide the column. Curve sets how a value turns into points. " +
+        "Linear counts every bit the same, sqrt and log give the most for the first gains, and target counts up to the target value only. " +
+        "Measured against sets what scores 100%: the best ship in the list, the best ship of the same size, or a fixed number. " +
+        "Same size keeps small ships from being outscored by big ones. Fits outside Min and Max are left out.")}</h3>
       <div class="pd-scroll"><table class="compact pd-metrics"><tr><th>Metric</th><th>Weight</th><th>Curve</th><th>Target</th><th>Measured against</th><th>Fixed</th><th>Min</th><th>Max</th></tr>${rows}</table></div>
-      <p class="muted small">Weight runs from 0 to 5; leave it blank to hide the column. <b>Curve</b> sets how a value turns into points. Linear counts every bit
-        the same, sqrt and log give the most for the first gains, and target counts up to the target value only. <b>Measured against</b>
-        sets what scores 100%: the best ship in the list, the best ship of the same size, or a fixed number. Same size keeps small ships
-        from being outscored by big ones. Fits outside <b>Min</b> and <b>Max</b> are left out.</p>
       <h3>Slot rules</h3>
       <div class="row">Always fill: ${P.KINDS.map((k) => `<label class="check"><input type="checkbox" data-req="${k}" ${R.slots.require[k] ? "checked" : ""}> ${k}s</label>`).join("")}</div>
       <div class="row">Never fit: ${Object.entries(P.USES).map(([u, l]) => `<label class="check" title="${esc(l)}"><input type="checkbox" data-ex="${u}" ${R.slots.exclude.includes(u) ? "checked" : ""}> ${u}</label>`).join("")}</div>

@@ -213,24 +213,24 @@
     const items = Object.entries(s.engines).map(([i, row]) => Object.assign({ row }, withDetail(c, [c.D.parts[+i]])[0]))
       .sort((a, b) => b.row.TravelSpeed - a.row.TravelSpeed);
     const n = items.length ? items[0].row.engines : 0;
-    return section("engines", "Engine options", `<p class="muted small">Values for this hull with ${n} of the engine fitted. Speeds and accelerations match the game's own figures, which we checked in the game. Boost recharge is 100 ÷ the engine's recharge time, the same calculation the wiki uses.</p>` + filterGroup("", table([
+    return section("engines", "Engine options", filterGroup("", table([
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Speed<br>m/s", (p) => num(p.row.ForwardSpeed)], ["Accel.<br>m/s²", (p) => num(p.row.ForwardAcceleration)],
       ["Boost<br>m/s", (p) => num(p.row.BoostSpeed)], ["Boost acc.<br>m/s²", (p) => num(p.row.BoostAcceleration)],
       ["Boost for<br>s", (p) => num(p.row.BoostMaxDuration)], ["Boost recharge<br>%/s", (p) => (p.d.boostRecharge ? num(100 / p.d.boostRecharge, 2) : "–")],
       ["Travel<br>m/s", (p) => num(p.row.TravelSpeed, 0)], ["Travel acc.<br>m/s²", (p) => num(p.row.TravelAcceleration)],
       ["Charge<br>s", (p) => num(p.row.TravelChargeTime)],
-    ].concat(buyCols(h)), items, "filterable")));
+    ].concat(buyCols(h)), items, "filterable")), `Values for this hull with ${n} of the engine fitted. Speeds and accelerations match the game's own figures, which we checked in the game. Boost recharge is 100 ÷ the engine's recharge time, the same calculation the wiki uses.`);
   }
 
   function thrusters(c, s, h) {
     const items = Object.entries(s.thrusters).map(([i, row]) => Object.assign({ row }, withDetail(c, [c.D.parts[+i]])[0]))
       .sort((a, b) => b.row.YawSpeed - a.row.YawSpeed);
-    return section("thrusters", "Thruster options", `<p class="muted small">SWI uses the base game's thrusters. Turn rates are for this hull, in degrees per second.</p>` + filterGroup("", table([
+    return section("thrusters", "Thruster options", filterGroup("", table([
       ["Name", (p) => h.partName(p), { txt: true, name: true }],
       ["Yaw<br>°/s", (p) => num(p.row.YawSpeed * DEG)], ["Pitch<br>°/s", (p) => num(p.row.PitchSpeed * DEG)], ["Roll<br>°/s", (p) => num(p.row.RollSpeed * DEG)],
       ["Strafe<br>m/s", (p) => num(p.row.HorizontalStrafeSpeed)], ["Strafe acc.<br>m/s²", (p) => num(p.row.HorizontalStrafeAcceleration)],
-    ].concat(buyCols(h)), items, "filterable")));
+    ].concat(buyCols(h)), items, "filterable")), `SWI uses the base game's thrusters. Turn rates are for this hull, in degrees per second.`);
   }
 
   // A heading (optional) and a table the search box filters; hidden as a whole when nothing in it matches.
@@ -326,7 +326,9 @@
     }).join("");
   }
 
-  function section(id, title, body) { return `<section id="sec-${id}"><h2>${title}</h2>${body}</section>`; }
+  // A section; its note (an explainer) goes into an (i) on the title, shown as a tooltip (style.css .info).
+  const info = (text) => ` <span class="info" tabindex="0" role="note" aria-label="${esc(text)}">i</span>`;
+  function section(id, title, body, note) { return `<section id="sec-${id}"><h2>${title}${note ? info(note) : ""}</h2>${body}</section>`; }
 
   /* c: { D, det, cfg, mods: {id: label}, enabled: [ids], loadouts: [...] | null | undefined }
    * Returns the page's main HTML for one ship. */
@@ -343,7 +345,7 @@
       `<a href="./${pathOf(s.origin, (d.page || {}).hull)}">${esc(((d.page || {}).hull || s.size).toUpperCase())}</a> › ${esc(s.name)}</nav>`;
     const main = [
       on.description && d.description ? section("description", "Description", d.description.split("\n").map((p) => `<p>${esc(p)}</p>`).join("")) : "",
-      on.loadouts ? section("loadouts", "Best loadouts", `<p class="muted small">The evaluator's best fit for each role, using the default rating profile, every seller and no save.</p><div id="loadouts">${loadoutHtml(c, s, c.loadouts, h)}</div>`) : "",
+      on.loadouts ? section("loadouts", "Best loadouts", `<div id="loadouts">${loadoutHtml(c, s, c.loadouts, h)}</div>`, `The evaluator's best fit for each role, using the default rating profile, every seller and no save.`) : "",
       on.slotLayout ? slotLayout(c, s, d) : "",
       on.equipmentFilter && (on.engines || on.thrusters || on.shields || on.weapons || on.turrets)
         ? searchBox("Filter equipment by name, use, seller or mod…", "parts") : "",

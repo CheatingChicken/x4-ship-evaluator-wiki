@@ -56,8 +56,7 @@
       <div id="factions" class="list"></div>
     </section>
     <section>
-      <h2>Player production <span id="build-count" class="muted"></span></h2>
-      <p class="muted small">Ships and parts your own wharves and docks can build. These are always available to you.</p>
+      <h2>Player production <span id="build-count" class="muted"></span> <span class="info" tabindex="0" role="note" aria-label="Ships and parts your own wharves and docks can build. These are always available to you.">i</span></h2>
       <button id="build-edit">Edit list…</button>
     </section>
     <section>
@@ -133,7 +132,7 @@
     </section>
 
     <section>
-      <h2>Formulas <span class="muted small">(our assumptions)</span></h2>
+      <h2>Formulas <span class="info" tabindex="0" role="note" aria-label="Our assumptions, not game data. Values measured from the game, such as speeds, turn rates, DPS and shields, cannot be changed here.">i</span></h2>
       <h3>Defence rating split (traders and miners)</h3>
       <div id="pd-defence" class="grid2"></div>
       <h3>Threat profiles</h3>
@@ -141,19 +140,15 @@
       <h3>Trip model</h3>
       <div class="row small"><label>Leg length <input type="number" id="pd-km" min="1" max="1000" step="1"> km</label>
         <label>Turn onto course <input type="number" id="pd-turn" min="0" max="180" step="1"> °</label></div>
-      <h3>Maintenance <span class="muted small">(SW Interworlds)</span></h3>
+      <h3>Maintenance <span class="muted small">(SW Interworlds)</span> <span class="info" tabindex="0" role="note" aria-label="Every 30 minutes each ship costs its maintenance points times the empire-size multiplier times 5,000 Cr. SWI sets your empire size from the value of your assets. Ship supplies and sectors you own can cover part of the bill; a ship docked at a suitable dock of yours pays 75%. The Maintenance metric is one ship's cost in open space.">i</span></h3>
       <div class="row small"><label>Empire size <select id="pd-empire"></select></label></div>
-      <p class="muted small">Every 30 minutes each ship costs its maintenance points times the empire-size multiplier times 5,000 Cr.
-        SWI sets your empire size from the value of your assets. Ship supplies and sectors you own can cover part of the bill;
-        a ship docked at a suitable dock of yours pays 75%. The Maintenance metric is one ship's cost in open space.</p>
-      <p class="muted small">Values measured from the game, such as speeds, turn rates, DPS and shields, cannot be changed here.</p>
     </section>
   </form>
 </dialog>
 
 <dialog id="savedata">
   <form method="dialog" novalidate>
-    <div class="row between"><h2 class="title">Save data</h2><button value="close">Close</button></div>
+    <div class="row between"><h2 class="title">Save data <span class="info" tabindex="0" role="note" aria-label="Relations use the in-game scale from −30 to +30. A faction lets you dock above −10. Your licences decide what a faction will sell you, and its shipyards and equipment dock decide what it has for sale. Your blueprints are listed under Player production in the sidebar.">i</span></h2><button value="close">Close</button></div>
     <p class="small" id="sd-info"></p>
     <div class="row">
       <input type="search" id="sd-q" placeholder="Filter factions…">
@@ -161,8 +156,6 @@
       <button type="button" id="sd-reset-all">Reset all to the imported save</button>
     </div>
     <div class="sd-scroll"><table id="sd-table"></table></div>
-    <p class="muted small">Relations use the in-game scale from −30 to +30. A faction lets you dock above −10. Your licences decide what a faction
-      will sell you, and its shipyards and equipment dock decide what it has for sale. Your blueprints are listed under Player production in the sidebar.</p>
   </form>
 </dialog>
 
@@ -179,49 +172,40 @@
     </section>
 
     <section id="gamerules">
-      <h2>Your game</h2>
+      <h2>Your game <span class="info" tabindex="0" role="note" aria-label="100% is SW Interworlds as released. Match your game: 50% for mods that halve maintenance, 0% if a mod turns it off. Applies to the Maintenance metric with any rating profile.">i</span></h2>
       <div class="row small"><label>Maintenance cost <input type="number" id="opt-maint" min="0" max="1000" step="1"> %</label></div>
-      <p class="muted small">100% is SW Interworlds as released. Match your game: 50% for mods that halve maintenance, 0% if a mod
-        turns it off. Applies to the Maintenance metric with any rating profile.</p>
     </section>
 
 
     <section id="savefile">
-      <h2>Save file</h2>
+      <h2>Save file <span class="info" tabindex="0" role="note" aria-label="Pick or drop a save (Documents\Egosoft\X4\&lt;number&gt;\save\*.xml.gz). The file is read in your browser and stays on your computer. Licences, reputation, shipyards and your blueprints come from it. Use Adjust to correct any of them by hand.">i</span></h2>
       <p class="small" id="savefile-current"></p>
       <div class="row"><label class="filepick"><input type="file" id="savefile-input" accept=".gz,.xml"> Choose a save…</label>
         <button type="button" id="savefile-adjust">Adjust save data…</button>
         <button type="button" id="savefile-forget">Forget it</button></div>
       <div class="progress" id="savefile-progress" hidden><span></span></div>
       <p class="small" id="savefile-msg"></p>
-      <p class="muted small">Pick or drop a save (<code>Documents\Egosoft\X4\&lt;number&gt;\save\*.xml.gz</code>). The file is read in your browser and stays on your computer.
-        Licences, reputation, shipyards and your blueprints come from it. Use <b>Adjust</b> to correct any of them by hand.</p>
     </section>
 
     <section id="wikimods" hidden>
-      <h2>Mods</h2>
+      <h2>Mods <span class="info" tabindex="0" role="note" aria-label="Ticked submods add their ships and equipment to the ranking. Submods you leave unticked are not downloaded.">i</span></h2>
       <div id="wikimods-list"></div>
       <p class="small" id="wikimods-msg"></p>
-      <p class="muted small">Ticked submods add their ships and equipment to the ranking. Submods you leave unticked are not downloaded.</p>
     </section>
 
     <section class="server-only" hidden>
-      <h2>Game data</h2>
+      <h2>Game data <span class="info" tabindex="0" role="note" aria-label="Reads the game and its enabled extensions (load order below) and rebuilds the data. This takes about 25 seconds. Run it after you update the game or a mod.">i</span></h2>
       <div id="setup-box"></div>
       <p class="small" id="data-current"></p>
       <label class="check small"><input type="checkbox" id="export-all"> Include disabled extensions</label>
       <div class="row"><button type="button" id="data-export">Re-export from game files</button></div>
-      <p class="muted small">Reads the game and its enabled extensions (load order below) and rebuilds the data. This takes about 25 seconds.
-        Run it after you update the game or a mod.</p>
       <details><summary class="small">Load order</summary><ol id="load-order" class="small"></ol></details>
     </section>
 
     <p class="muted small" id="job-status"></p>
 
     <section>
-      <h2>Rating</h2>
-      <p class="small">Everything that decides a score is set in the <b>rating profile</b>, from weights and limits to threat profiles and
-        the trip model.</p>
+      <h2>Rating <span class="info" tabindex="0" role="note" aria-label="Everything that decides a score is set in the rating profile, from weights and limits to threat profiles and the trip model.">i</span></h2>
       <div class="row"><button type="button" id="settings-profile">Open rating profile…</button></div>
     </section>
 
