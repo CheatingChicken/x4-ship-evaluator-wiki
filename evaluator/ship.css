@@ -76,3 +76,16 @@ a.button:hover { border-color: var(--accent); text-decoration: none; }
 /* the wiki's ship picture, at the top of the infobox (or of the page without one) */
 .shipimg { margin: 8px 0 4px; text-align: center; }
 .shipimg img { max-width: 100%; max-height: 260px; height: auto; border-radius: 4px; }
+
+/* maintenance in credits: Corporation size shown, every empire size on click */
+.infobox td.maint { padding: 0; }
+.infobox td.maint summary { display: flex; justify-content: space-between; gap: 8px; padding: 5px 8px; cursor: pointer; }
+.infobox td.maint summary > span:first-child { color: var(--muted); }
+.infobox td.maint summary:hover > span:first-child { color: var(--text); }
+.infobox td.maint table.levels { margin: 0 0 4px; }
+.infobox td.maint table.levels td { padding: 3px 8px 3px 20px; border-bottom: 0; }
+.infobox td.maint p { margin: 2px 8px 6px; }
+.infobox td.maint summary { list-style: none; }
+.infobox td.maint summary::-webkit-details-marker { display: none; }
+.infobox td.maint summary > span:first-child::after { content: " ▸"; }
+.infobox td.maint details[open] summary > span:first-child::after { content: " ▾"; }

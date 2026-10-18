@@ -164,6 +164,17 @@
     return i ? `<img class="shipicon" src="${esc(c.cfg.icons + i + ".png")}" alt="" onerror="this.remove()">` : "";
   };
 
+  // SWI maintenance in credits: Corporation size (x1) shown, every empire size on click. SWI sets the
+  // size from the value of the player's assets (optimiser EMPIRE_LEVELS).
+  function maintenanceCredits(c, s) {
+    if (!c.maintenanceCredits || !c.empireLevels) return "";
+    const per = s.threat * c.maintenanceCredits, base = c.empireLevels.find((l) => l.mult === 1) || c.empireLevels[0];
+    const levels = c.empireLevels.map((l) => `<tr title="${esc(l.assets)}"><td>${esc(l.name)} <span class="muted small">×${l.mult}</span></td>` +
+      `<td>${l.mult ? cr(per * l.mult) : "none"}</td></tr>`).join("");
+    return `<tr><td colspan="2" class="maint"><details><summary><span>In credits</span><span>${cr(per * base.mult)} <span class="muted small">at ${esc(base.name)} size</span></span></summary>` +
+      `<table class="levels">${levels}</table><p class="muted small">Per 30 minutes, by empire size. SWI sets your size from the value of your assets.</p></details></td></tr>`;
+  }
+
   function infobox(c, s, d, h, image) {
     const cargo = s.cargo || {}, hang = s.hangar || {};
     const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
@@ -173,7 +184,7 @@
       ${head("Ship")}${row("Identifier", `<code>${esc(s.ware)}</code>`)}${row("Size", s.size.toUpperCase())}${row("Class", h.typeName(s.type))}
       ${row("Purpose", h.purposeName(s.purpose))}${row("Licence", h.licence(s.licence))}
       ${s.threat ? row("Maintenance", `${num(s.threat, 0)} points per 30 min`) +
-        (c.maintenanceCredits ? row("In credits", `${cr(s.threat * c.maintenanceCredits)} <span class="muted small">at Corporation size</span>`) : "") : ""}
+        maintenanceCredits(c, s) : ""}
       ${head("Base stats")}${row("Hull", num(s.hull, 0))}${d.radar != null ? row("Radar range", num(d.radar / 1000, 1) + " km") : ""}${row("Mass", num(s.mass, 1) + " t")}
       ${head("Storage")}${["container", "solid", "liquid", "condensate"].map((t) => row(t[0].toUpperCase() + t.slice(1), num(cargo[t] || 0, 0))).join("")}
       ${head("Hangar")}${row("S ships", num(hang.dock_s || 0, 0))}${row("M ships", num(hang.dock_m || 0, 0))}
@@ -520,7 +531,7 @@
       const [D, det] = await Promise.all([src.load(null, mods), src.details(mods)]);
       status.textContent = "";
       const c = { D, det, cfg, mods: src.mods, enabled, labels: D.labels, licenceNames: (G.X4Opt || {}).LICENCE_NAMES,
-        maintenanceCredits: (G.X4Opt || {}).MAINTENANCE_CREDITS };
+        maintenanceCredits: (G.X4Opt || {}).MAINTENANCE_CREDITS, empireLevels: (G.X4Opt || {}).EMPIRE_LEVELS };
       // the mod switches, first thing on every page
       const toggles = cfg.sections.modToggles ? `<p class="modtoggles small">${r.kind === "index" ? "Ships" : "Equipment"} from: ${Object.entries(src.mods).map(([id, label]) => id === "swi"
         ? `<label><input type="checkbox" checked disabled> ${esc(label)}</label>`
